@@ -874,7 +874,9 @@ class BtMain {
         };
         localStorage.setItem('mlrdev.belote.btoptions', JSON.stringify(jsdata));
         if (jsdata.btcoinche !== coincheBefore) {
-            location.reload();
+            this.applyoptions();
+            $(':mobile-pagecontainer').pagecontainer('change', '#btpage0', { transition: "fade" });
+            document.dispatchEvent(new Event('btnouvellepartie'));
             return;
         }
         this.applyoptions();
