@@ -576,6 +576,14 @@ class BtMain {
         if (this.m_logenchere) { this.m_logenchere.remove(); this.m_logenchere = null; }
     }
 
+    clearboard() {
+        this.clearencherecourante();
+        this.clearlogenchere();
+        document.getElementById('btactionbutton')?.remove();
+        document.getElementById('btcoinchebidpanel')?.remove();
+        this.m_waitforuser = false;
+    }
+
     displayencherecourante() {
         if (this.m_enchereicon) this.m_enchereicon.remove();
         if (this.m_pari.couleur < 0) return;
@@ -875,6 +883,7 @@ class BtMain {
         localStorage.setItem('mlrdev.belote.btoptions', JSON.stringify(jsdata));
         if (jsdata.btcoinche !== coincheBefore) {
             this.applyoptions();
+            this.clearboard();
             $(':mobile-pagecontainer').pagecontainer('change', '#btpage0', { transition: "fade" });
             document.dispatchEvent(new Event('btnouvellepartie'));
             return;
