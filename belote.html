@@ -1,0 +1,112 @@
+﻿<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <meta name="description" content="">
+    <meta name="author" content="Marc">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Belote</title>
+    <style>
+        th { border-bottom: 1px solid #d6d6d6; }
+        tr:nth-child(even) { background: #4b4b4b; }
+        tr:nth-child(odd) { background: #808080; }
+        #btplateauplis, #btcartessud, #btpliprecedent {
+            position: absolute; 
+            border: double; 
+            background-color: green;
+        }
+    </style>
+    <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+    <script src="scripts/BtMain.js"></script>
+    <script src="scripts/btjoueur.js"></script>
+    <script src="scripts/btcarte.js"></script>
+    <script src="scripts/btpli.js"></script>
+</head>
+<body>
+    <div data-role="page" id="btpage0" data-theme="b">
+        <header data-role="header" data-position="fixed" style="text-align:center">
+            <h1>Ma Belote</h1>
+            <a href="#btpage1" class="ui-btn ui-corner-all ui-shadow ui-icon-info ui-btn-icon-left" data-rel="external">Info</a>
+        </header>
+        <main data-role="content">
+            <div id="btscorebar" style="font-family:'Times New Roman',Times,serif;font-size:13px;padding:3px 10px;background:#1a1a1a;color:white;display:flex;justify-content:space-around;align-items:center;border-bottom:1px solid #444">
+                <span>N&#8209;S&nbsp;:&nbsp;<b id="btpnt0i">0</b>&nbsp;<span style="color:#aaa;font-size:11px">(<span id="bttot0i">0</span>)</span></span>
+                <span style="color:#555">|</span>
+                <span>E&#8209;O&nbsp;:&nbsp;<b id="btpnt1i">0</b>&nbsp;<span style="color:#aaa;font-size:11px">(<span id="bttot1i">0</span>)</span></span>
+            </div>
+            <div id="btplateauplis" style="background-image: url('tapis-carte-2.jpg'); background-size: cover;"></div>
+            <div id="btcartessud"></div>
+        </main>
+        <footer data-role="footer" data-position="fixed" style="text-align:left; font-family:'Times New Roman', Times, serif; font-size:small">V0.1.00</footer>
+    </div>
+    <div id="btpage1" data-role="page" data-theme="b">
+        <header data-role="header">
+            <a href="#btpage0" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left">Retour</a>
+            <h1>Ma Belote</h1>
+            <a href="#btpage2" class="ui-btn ui-corner-all ui-shadow ui-icon-grid ui-btn-icon-left" data-rel="external">Options</a>
+        </header>
+        <main data-role="main" class="ui-content">
+            <div class="ui-grid-b" id="btscores" style="font-family:'Times New Roman', Times, serif; text-align:right">
+                <div class="ui-block-a"><div class="ui-bar ui-bar-e">Scores</div></div>
+                <div class="ui-block-b"><div class="ui-bar ui-bar-e">En cours</div></div>
+                <div class="ui-block-c"><div class="ui-bar ui-bar-e">Total</div></div>
+                <div class="ui-block-a"><div class="ui-bar ui-bar-e">N-S</div></div>
+                <div id="btpnt0" class="ui-block-b"><div class="ui-bar ui-bar-e">999</div></div>
+                <div id="bttot0" class="ui-block-b"><div class="ui-bar ui-bar-e">9999</div></div>
+                <div class="ui-block-a"><div class="ui-bar ui-bar-e">E-O</div></div>
+                <div id="btpnt1" class="ui-block-c"><div class="ui-bar ui-bar-e">999</div></div>
+                <div id="bttot1" class="ui-block-c"><div class="ui-bar ui-bar-e">9999</div></div>
+            </div>
+            <label>Pli précédent</label>
+            <div id="btpliprecedent"></div>
+        </main>
+        <footer data-role="footer" data-position="fixed">
+            <div style="text-align:left; font-family:'Times New Roman', Times, serif; font-size:small">V0.1.00</div>
+        </footer>
+    </div>
+    <!-- Additional pages can be optimized similarly -->
+    <div id="btpage2" data-role="page" data-theme="b">
+        <header data-role="header">
+            <a href="#btpage1" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left">Retour</a>
+            <h1>Options</h1>
+        </header>
+        <main data-role="main" class="ui-content">
+            <label for="btdelay">Délai (ms)</label>
+            <input type="number" id="btdelay" value="800" min="100" max="3000" step="100">
+            <label for="btcardwidth">Largeur carte (px)</label>
+            <input type="number" id="btcardwidth" value="100" min="50" max="200" step="10">
+            <label for="btsenshoraire">Sens horaire</label>
+            <input type="checkbox" id="btsenshoraire" data-role="flipswitch">
+            <label for="btautolast">Jouer la dernière carte auto.</label>
+            <input type="checkbox" id="btautolast" data-role="flipswitch">
+            <label for="btautouniq">Jouer seule carte valide auto.</label>
+            <input type="checkbox" id="btautouniq" data-role="flipswitch">
+            <label for="btjeuauto">Jeu entier automatique</label>
+            <input type="checkbox" id="btjeuauto" data-role="flipswitch">
+            <label for="btcoinche">Mode Coinche</label>
+            <input type="checkbox" id="btcoinche" data-role="flipswitch">
+            <a id="btvalidateoptions" class="ui-btn ui-corner-all ui-shadow" style="margin-top:16px">Valider</a>
+        </main>
+        <footer data-role="footer" data-position="fixed">
+            <div id="btrejouerdonne" class="ui-btn ui-corner-all ui-shadow" style="display:inline-block;margin:4px">Rejouer Donne</div>
+        </footer>
+    </div>
+    <div id="btpage3" data-role="page" data-theme="b">
+        <header data-role="header">
+            <h1>Résultat</h1>
+        </header>
+        <main data-role="main" class="ui-content">
+            <div id="btmsgresultat"></div>
+            <table id="btscoresfin" style="width:100%;font-family:'Times New Roman',Times,serif;text-align:center"></table>
+            <div id="btmessagescores" style="margin-top:12px"></div>
+            <a id="btreplaydeal" class="ui-btn ui-corner-all ui-shadow" style="margin-top:12px">Rejouer cette donne</a>
+        </main>
+        <footer data-role="footer" data-position="fixed">
+            <div id="btretourjeu" class="ui-btn ui-corner-all ui-shadow" style="display:inline-block;margin:4px">Donne suivante</div>
+            <div id="btquitterpartie" class="ui-btn ui-corner-all ui-shadow" style="display:inline-block;margin:4px">Quitter Partie</div>
+        </footer>
+    </div>
+</body>
+</html>
