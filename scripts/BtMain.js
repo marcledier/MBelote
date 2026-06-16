@@ -862,6 +862,7 @@ class BtMain {
 
     validateoptions() {
         const g = id => document.getElementById(id);
+        const coincheBefore = BtMain.BTCOINCHE;
         const jsdata = {
             btdelay:      g('btdelay').value,
             btcardwidth:  g('btcardwidth').value,
@@ -872,6 +873,10 @@ class BtMain {
             btcoinche:    g('btcoinche').checked
         };
         localStorage.setItem('mlrdev.belote.btoptions', JSON.stringify(jsdata));
+        if (jsdata.btcoinche !== coincheBefore) {
+            location.reload();
+            return;
+        }
         this.applyoptions();
         this.retourjeu();
     }
