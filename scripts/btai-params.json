@@ -2,6 +2,7 @@
     "_comment": "AI parameters — loaded at runtime by btai.js. Change values here to tune AI behaviour without touching game code.",
 
     "game": {
+        "version": "V0.1.01",
         "humanPlayer": 0,
         "scoreFinal": 1000,
         "testBetloop": false

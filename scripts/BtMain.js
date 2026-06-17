@@ -79,6 +79,9 @@ class BtMain {
 
         this.applyoptions();
 
+        const version = BtAIParams?.game?.version ?? '';
+        if (version) document.querySelectorAll('.bt-footer-text').forEach(el => el.textContent = version);
+
         for (let ind1 = 0; ind1 < 4; ind1++) {
             for (let ind2 = 0; ind2 < 8; ind2++) {
                 this.m_cartes.push(new BtCarte(ind1, ind2));
