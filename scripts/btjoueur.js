@@ -58,61 +58,88 @@ class BtJoueur {
 
     _scoremaincoinche(attcol) {
         let score = 0;
+        const p = BtAIParams?.coinche?.handScore ?? {};
+        const atoutLengthBonuses = p.atoutLengthBonuses ?? [{ minLength: 6, bonus: 20 }, { minLength: 5, bonus: 12 }, { minLength: 4, bonus: 6 }];
+        const nineBonus     = p.nineAtoutBonus       ?? 10;
+        const jackBonus     = p.jackAtoutBonus        ?? 5;
+        const singletonPts  = p.singletonBonus        ?? 4;
+        const voidPts       = p.voidBonus             ?? 2;
+        const minPtToCount  = p.minPointValueToCount  ?? 10;
+
         const atouts = this.m_cartesparcouleur[attcol];
 
         atouts.forEach(c => {
             score += c.pointcarte(true);
-            if (c.m_valeur === 4) score += 10;
-            if (c.m_valeur === 2) score += 5;
+            if (c.m_valeur === 4) score += nineBonus;
+            if (c.m_valeur === 2) score += jackBonus;
         });
-        if      (atouts.length >= 6) score += 20;
-        else if (atouts.length >= 5) score += 12;
-        else if (atouts.length >= 4) score += 6;
+        for (const { minLength, bonus } of atoutLengthBonuses) {
+            if (atouts.length >= minLength) { score += bonus; break; }
+        }
 
         for (let col = 0; col < 4; col++) {
             if (col === attcol) continue;
             const ncol = this.m_cartesparcouleur[col];
             ncol.forEach(c => {
                 const pt = c.pointcarte(false);
-                if (pt >= 10) score += pt;
+                if (pt >= minPtToCount) score += pt;
             });
-            if (ncol.length === 1) score += 4;
-            if (ncol.length === 0) score += 2;
+            if (ncol.length === 1) score += singletonPts;
+            if (ncol.length === 0) score += voidPts;
         }
         return score;
     }
 
     _scoremaincomplement(attcol) {
         let score = 0;
+        const p = BtAIParams?.coinche?.complementHandScore ?? {};
+        const nineBonus    = p.nineAtoutBonus      ?? 10;
+        const singletonPts = p.singletonBonus      ?? 5;
+        const voidPts      = p.voidBonus           ?? 3;
+        const minPtToCount = p.minPointValueToCount ?? 10;
+
         for (let col = 0; col < 4; col++) {
             const ncol = this.m_cartesparcouleur[col];
             if (col === attcol) {
                 ncol.forEach(c => {
                     score += c.pointcarte(true);
-                    if (c.m_valeur === 4) score += 10;
+                    if (c.m_valeur === 4) score += nineBonus;
                 });
             } else {
                 ncol.forEach(c => {
                     const pt = c.pointcarte(false);
-                    if (pt >= 10) score += pt;
+                    if (pt >= minPtToCount) score += pt;
                 });
-                if (ncol.length === 1) score += 5;
-                if (ncol.length === 0) score += 3;
+                if (ncol.length === 1) score += singletonPts;
+                if (ncol.length === 0) score += voidPts;
             }
         }
         return score;
     }
 
     paricoinche(game) {
+        const p = BtAIParams?.coinche?.bid ?? {};
+        const minBidValue      = p.minBidValue      ?? 80;
+        const maxBidValue      = p.maxBidValue      ?? 130;
+        const bidStep          = p.bidStep          ?? 10;
+        const minScoreToOpen   = p.minScoreToOpenBid ?? 70;
+        const scorePerStep     = p.scorePerBidStep  ?? 8;
+        const maxBidCap        = p.maxBidCap        ?? 160;
+
+        const pc = BtAIParams?.coinche?.complement ?? {};
+        const raiseDivisor = pc.partnerRaiseDivisor ?? 30;
+        const maxSteps     = pc.partnerMaxRaiseSteps ?? 2;
+        const raiseCap     = pc.partnerRaiseCap      ?? 120;
+
         const partnerid    = (this.m_id + 2) % 4;
         const partnerleads = (game.m_pari.couleur >= 0 && game.m_preneurid === partnerid);
         let bid;
 
         if (partnerleads) {
             const compscore = this._scoremaincomplement(game.m_pari.couleur);
-            const steps = Math.min(2, Math.floor(compscore / 30));
+            const steps = Math.min(maxSteps, Math.floor(compscore / raiseDivisor));
             if (steps === 0) return { couleur: -1 };
-            bid = Math.min(120, game.m_pari.point + steps * 10);
+            bid = Math.min(raiseCap, game.m_pari.point + steps * bidStep);
             if (bid <= game.m_pari.point) return { couleur: -1 };
             return { couleur: game.m_pari.couleur, point: bid };
         }
@@ -126,15 +153,24 @@ class BtJoueur {
             if (score > bestscore) { bestscore = score; bestcouleur = attcol; }
         }
 
-        const minbid = (game.m_pari.point > 0 ? game.m_pari.point + 10 : 80);
-        if (minbid > 160 || bestscore < 70) return { couleur: -1 };
+        const minbid = (game.m_pari.point > 0 ? game.m_pari.point + bidStep : minBidValue);
+        if (minbid > maxBidCap || bestscore < minScoreToOpen) return { couleur: -1 };
 
-        bid = Math.min(130, 80 + Math.floor((bestscore - 70) / 8) * 10);
+        bid = Math.min(maxBidValue, minBidValue + Math.floor((bestscore - minScoreToOpen) / scorePerStep) * bidStep);
         if (bid < minbid) return { couleur: -1 };
         return { couleur: bestcouleur, point: bid };
     }
 
     acceptatout(carteatout, bfirstturn) {
+        const p = BtAIParams?.belote?.acceptAtout ?? {};
+        const firstTurnThreshold  = p.firstTurnThreshold  ?? 100;
+        const secondTurnThreshold = p.secondTurnThreshold ?? 100;
+        const beloteBonus         = p.beloteBonusPoints   ?? 15;
+        const hc                  = p.highCardBonus       ?? {};
+        const patoutDoubleAbove   = hc.patoutDoubleAbove  ?? 11;
+        const pautreDoubleAbove   = hc.pautreDoubleAbove  ?? 10;
+        const natoutBonuses       = p.natoutBonuses       ?? [{ minNatout: 3, bonus: 10 }, { minNatout: 4, bonus: 5 }];
+
         const compterpoint = (cartes, couleuratout) => {
             let natout = 0;
             let patout = 0, pautre = 0, pbelote = 0;
@@ -143,16 +179,17 @@ class BtJoueur {
                 if (carte.m_couleur === couleuratout) {
                     natout++;
                     if (ncarte === 3 || ncarte === 4) pbelote++;
-                    patout += (ncarte > 11 ? 2 * ncarte : ncarte);
-                    patout += (ncarte > 10 ? 2 * ncarte : ncarte);
+                    patout += (ncarte > patoutDoubleAbove ? 2 * ncarte : ncarte);
+                    patout += (ncarte > patoutDoubleAbove - 1 ? 2 * ncarte : ncarte);
                 } else {
-                    pautre += (ncarte > 10 ? 2 * ncarte : ncarte);
+                    pautre += (ncarte > pautreDoubleAbove ? 2 * ncarte : ncarte);
                 }
             });
-            if (pbelote === 2) patout += 15;
+            if (pbelote === 2) patout += beloteBonus;
             if (patout > 75) {
-                if (natout > 2) patout += 10 * natout;
-                if (natout > 3) patout += 5  * natout;
+                for (const { minNatout, bonus } of natoutBonuses) {
+                    if (natout > minNatout - 1) patout += bonus * natout;
+                }
                 if (pautre > 12) patout += pautre;
             }
             return patout;
@@ -161,7 +198,7 @@ class BtJoueur {
         if (bfirstturn) {
             const hand = this.gethand(carteatout.m_couleur);
             hand.push(carteatout);
-            return (compterpoint(hand, carteatout.m_couleur) > 100 ? carteatout.m_couleur : -1);
+            return (compterpoint(hand, carteatout.m_couleur) > firstTurnThreshold ? carteatout.m_couleur : -1);
         }
 
         let maxnpoint = -1;
@@ -173,6 +210,6 @@ class BtJoueur {
             const npoint = compterpoint(hand, attcol);
             if (npoint > maxnpoint) { maxnpoint = npoint; maxattcol = attcol; }
         }
-        return (maxnpoint > 100 ? maxattcol : -1);
+        return (maxnpoint > secondTurnThreshold ? maxattcol : -1);
     }
 }

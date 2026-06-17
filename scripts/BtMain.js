@@ -12,10 +12,10 @@ const LAST_TRICK_BONUS = 10;
 
 class BtMain {
     // ── Static config (replaces BtMain.prototype.X and BtMain.c_X) ────────────
-    static c_humanplayer  = 0;
-    static c_test_betloop = false;
+    static c_humanplayer  = BtAIParams?.game?.humanPlayer  ?? 0;
+    static c_test_betloop = BtAIParams?.game?.testBetloop  ?? false;
     static BTDELAY        = 800;
-    static BTSCOREFINAL   = 1000;
+    static BTSCOREFINAL   = BtAIParams?.game?.scoreFinal   ?? 1000;
     static BTSENSINVERSE  = false;
     static BTAUTOPLAYLAST = false;
     static BTAUTOPLAYUNIQ = false;
@@ -832,7 +832,7 @@ class BtMain {
         if (jsdata) {
             BtCarte.CARTEWIDTH      = parseInt(jsdata.btcardwidth) || 100;
             BtMain.BTDELAY          = parseInt(jsdata.btdelay)     || 800;
-            BtMain.BTSCOREFINAL     = 1000;
+            BtMain.BTSCOREFINAL     = BtAIParams?.game?.scoreFinal ?? 1000;
             BtMain.BTSENSINVERSE    = jsdata.btsenshoraire  || false;
             BtMain.BTAUTOPLAYLAST   = jsdata.btautolast     || false;
             BtMain.BTAUTOPLAYUNIQ   = jsdata.btautouniq     || false;
@@ -841,7 +841,7 @@ class BtMain {
         } else {
             BtCarte.CARTEWIDTH    = 100;
             BtMain.BTDELAY        = 800;
-            BtMain.BTSCOREFINAL   = 1000;
+            BtMain.BTSCOREFINAL   = BtAIParams?.game?.scoreFinal ?? 1000;
             BtMain.BTSENSINVERSE  = false;
             BtMain.BTAUTOPLAYLAST = false;
             BtMain.BTAUTOPLAYUNIQ = false;

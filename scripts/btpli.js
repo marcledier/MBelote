@@ -82,6 +82,10 @@ class BtPli {
     }
 
     risquedecoupe(game, couleur) {
+        const p = BtAIParams?.play?.cutRisk ?? {};
+        const canCutScore    = p.opponentCanCutScore    ?? 3;
+        const voidBonusScore = p.opponentVoidBonusScore ?? 10;
+
         const joueur = game.m_joueurs[game.m_donne.playerid];
         const nbatt  = joueur.m_cartesparcouleur[game.m_pari.couleur].length
                      + game.m_donne.couleurjouees[game.m_pari.couleur];
@@ -92,8 +96,8 @@ class BtPli {
             case 0: {
                 const joueur0 = game.m_joueurs[(game.m_donne.playerid + 3) % 4];
                 if (joueur0.m_fournitcolor[game.m_pari.couleur]) {
-                    result += 3;
-                    if (!joueur0.m_fournitcolor[couleur]) result += 10;
+                    result += canCutScore;
+                    if (!joueur0.m_fournitcolor[couleur]) result += voidBonusScore;
                 }
             }
             // falls through
@@ -101,8 +105,8 @@ class BtPli {
             case 2: {
                 const joueur1 = game.m_joueurs[(game.m_donne.playerid + 1) % 4];
                 if (joueur1.m_fournitcolor[game.m_pari.couleur]) {
-                    result += 3;
-                    if (!joueur1.m_fournitcolor[couleur]) result += 10;
+                    result += canCutScore;
+                    if (!joueur1.m_fournitcolor[couleur]) result += voidBonusScore;
                 }
                 break;
             }
@@ -233,6 +237,7 @@ class BtPli {
     }
 
     meilleurecarte2(game, hand) {
+        const cutThreshold = BtAIParams?.play?.cutRisk?.highCutRiskThreshold ?? 10;
         let g, h;
 
         if (this.m_winnerid % 2 === game.m_donne.playerid % 2) {
@@ -240,7 +245,7 @@ class BtPli {
             if (g.length > 0) {
                 h = g.filter(c => c.m_couleur !== this.m_couleurdemandee);
                 if (h.length > 0) {
-                    if (this.risquedecoupe(game, this.m_couleurdemandee) > 10) return this.lamoinschere(h);
+                    if (this.risquedecoupe(game, this.m_couleurdemandee) > cutThreshold) return this.lamoinschere(h);
                     g = this.cartesimprenables(h);
                     if (g.length > 0) {
                         const nonimpr = h.filter(c => g.indexOf(c) < 0);
@@ -249,14 +254,14 @@ class BtPli {
                     }
                     return this.lamoinschere(h);
                 }
-                if (this.risquedecoupe(game, this.m_couleurdemandee) > 10) return this.lamoinschere(g);
+                if (this.risquedecoupe(game, this.m_couleurdemandee) > cutThreshold) return this.lamoinschere(g);
                 return this.lapluschere(g);
             }
             h = this.cartesgagnantes(hand);
             if (h.length > 0) {
                 g = this.cartesimprenables(h);
                 if (g.length > 0) {
-                    if (this.risquedecoupe(game, this.m_couleurdemandee) > 10) return this.lamoinschere(g);
+                    if (this.risquedecoupe(game, this.m_couleurdemandee) > cutThreshold) return this.lamoinschere(g);
                     const nonimpr = hand.filter(c => g.indexOf(c) < 0);
                     if (nonimpr.length > 0) return this.lapluschere(nonimpr);
                     return this.lapluschere(g);
@@ -295,6 +300,9 @@ class BtPli {
 
     meilleurecarte3(game, hand) {
         const clratout = game.m_pari.couleur;
+        const lt = BtAIParams?.play?.lastTrick ?? {};
+        const atoutHighThreshold    = lt.couleurJoueesAtoutHighThreshold    ?? 5;
+        const nonAtoutLowThreshold  = lt.couleurJoueesNonAtoutLowThreshold  ?? 5;
         let g, h;
 
         if (this.m_winnerid % 2 === game.m_donne.playerid % 2) {
@@ -328,7 +336,7 @@ class BtPli {
             }
             const impr = this.cartesimprenables(g);
             if (impr.length < g.length) {
-                if (game.m_donne.couleurjouees[clratout] > 5 && game.m_donne.couleurjouees[this.m_couleurdemandee] < 5) {
+                if (game.m_donne.couleurjouees[clratout] > atoutHighThreshold && game.m_donne.couleurjouees[this.m_couleurdemandee] < nonAtoutLowThreshold) {
                     return this.lapluschere(g.filter(c => impr.indexOf(c) < 0));
                 }
             }

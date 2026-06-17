@@ -1,0 +1,74 @@
+{
+    "_comment": "AI parameters — loaded at runtime by btai.js. Change values here to tune AI behaviour without touching game code.",
+
+    "game": {
+        "humanPlayer": 0,
+        "scoreFinal": 1000,
+        "testBetloop": false
+    },
+
+    "belote": {
+        "acceptAtout": {
+            "firstTurnThreshold": 100,
+            "secondTurnThreshold": 100,
+            "beloteBonusPoints": 15,
+            "highCardBonus": {
+                "patoutDoubleAbove": 11,
+                "pautreDoubleAbove": 10
+            },
+            "natoutBonuses": [
+                { "minNatout": 3, "bonus": 10 },
+                { "minNatout": 4, "bonus": 5 }
+            ]
+        }
+    },
+
+    "coinche": {
+        "bid": {
+            "minBidValue": 80,
+            "maxBidValue": 130,
+            "bidStep": 10,
+            "minScoreToOpenBid": 70,
+            "scorePerBidStep": 8,
+            "maxBidCap": 160
+        },
+        "complement": {
+            "partnerRaiseDivisor": 30,
+            "partnerMaxRaiseSteps": 2,
+            "partnerRaiseCap": 120
+        },
+        "handScore": {
+            "atoutLengthBonuses": [
+                { "minLength": 6, "bonus": 20 },
+                { "minLength": 5, "bonus": 12 },
+                { "minLength": 4, "bonus": 6 }
+            ],
+            "nineAtoutBonus": 10,
+            "jackAtoutBonus": 5,
+            "singletonBonus": 4,
+            "voidBonus": 2,
+            "minPointValueToCount": 10
+        },
+        "complementHandScore": {
+            "nineAtoutBonus": 10,
+            "singletonBonus": 5,
+            "voidBonus": 3,
+            "minPointValueToCount": 10
+        }
+    },
+
+    "play": {
+        "cutRisk": {
+            "opponentCanCutScore": 3,
+            "opponentVoidBonusScore": 10,
+            "highCutRiskThreshold": 10
+        },
+        "leadAtout": {
+            "playIfImprenableOnly": true
+        },
+        "lastTrick": {
+            "couleurJoueesAtoutHighThreshold": 5,
+            "couleurJoueesNonAtoutLowThreshold": 5
+        }
+    }
+}
