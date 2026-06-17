@@ -52,6 +52,7 @@
         },
         "complementHandScore": {
             "nineAtoutBonus": 10,
+            "jackAtoutBonus": 5,
             "singletonBonus": 5,
             "voidBonus": 3,
             "minPointValueToCount": 10

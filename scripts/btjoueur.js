@@ -70,8 +70,8 @@ class BtJoueur {
 
         atouts.forEach(c => {
             score += c.pointcarte(true);
-            if (c.m_valeur === 4) score += nineBonus;
-            if (c.m_valeur === 2) score += jackBonus;
+            if (c.m_valeur === 2) score += nineBonus;
+            if (c.m_valeur === 4) score += jackBonus;
         });
         for (const { minLength, bonus } of atoutLengthBonuses) {
             if (atouts.length >= minLength) { score += bonus; break; }
@@ -94,6 +94,7 @@ class BtJoueur {
         let score = 0;
         const p = BtAIParams?.coinche?.complementHandScore ?? {};
         const nineBonus    = p.nineAtoutBonus      ?? 10;
+        const jackBonus    = p.jackAtoutBonus      ?? 5;
         const singletonPts = p.singletonBonus      ?? 5;
         const voidPts      = p.voidBonus           ?? 3;
         const minPtToCount = p.minPointValueToCount ?? 10;
@@ -103,7 +104,8 @@ class BtJoueur {
             if (col === attcol) {
                 ncol.forEach(c => {
                     score += c.pointcarte(true);
-                    if (c.m_valeur === 4) score += nineBonus;
+                    if (c.m_valeur === 2) score += nineBonus;
+                    if (c.m_valeur === 4) score += jackBonus;
                 });
             } else {
                 ncol.forEach(c => {
@@ -203,11 +205,11 @@ class BtJoueur {
 
         let maxnpoint = -1;
         let maxattcol = -1;
+        const hand2 = this.gethand(carteatout.m_couleur);
+        hand2.push(carteatout);
         for (let attcol = 0; attcol < 4; attcol++) {
             if (attcol === carteatout.m_couleur) continue;
-            const hand = this.gethand(carteatout.m_couleur);
-            hand.push(carteatout);
-            const npoint = compterpoint(hand, attcol);
+            const npoint = compterpoint(hand2, attcol);
             if (npoint > maxnpoint) { maxnpoint = npoint; maxattcol = attcol; }
         }
         return (maxnpoint > secondTurnThreshold ? maxattcol : -1);
