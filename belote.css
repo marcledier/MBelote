@@ -1,0 +1,63 @@
+/* Tables */
+th { border-bottom: 1px solid #d6d6d6; }
+tr:nth-child(even) { background: #4b4b4b; }
+tr:nth-child(odd)  { background: #808080; }
+
+/* Game board panels */
+#btplateauplis,
+#btcartessud,
+#btpliprecedent {
+    position: absolute;
+    border: double;
+    background-color: green;
+}
+
+#btplateauplis {
+    background-image: url('tapis-carte-2.jpg');
+    background-size: cover;
+}
+
+/* Score bar (top of main page) */
+#btscorebar {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 13px;
+    padding: 3px 10px;
+    background: #1a1a1a;
+    color: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-bottom: 1px solid #444;
+}
+
+/* Info page score grid */
+#btscores {
+    font-family: 'Times New Roman', Times, serif;
+    text-align: right;
+}
+
+/* Result page score table */
+#btscoresfin {
+    width: 100%;
+    font-family: 'Times New Roman', Times, serif;
+    text-align: center;
+}
+
+#btmessagescores { margin-top: 12px; }
+#btreplaydeal    { margin-top: 12px; }
+#btvalidateoptions { margin-top: 16px; }
+
+/* Footer inline buttons */
+#btrejouerdonne,
+#btretourjeu,
+#btquitterpartie {
+    display: inline-block;
+    margin: 4px;
+}
+
+/* Page footers */
+.bt-footer-text {
+    text-align: left;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: small;
+}
