@@ -568,7 +568,7 @@ class BtMain {
         if (!this.m_logenchere) {
             const div = document.createElement('div');
             div.id = 'btlogenchere';
-            div.style.cssText = 'position:absolute;z-index:97;right:-120px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.65);color:white;font-size:11px;border-radius:4px;padding:4px 8px;line-height:1.8;white-space:nowrap;width:110px';
+            div.style.cssText = 'position:absolute;z-index:97;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.65);color:white;font-size:11px;border-radius:4px;padding:4px 8px;line-height:1.8;white-space:nowrap;width:110px';
             document.getElementById('btplateauplis').appendChild(div);
             this.m_logenchere = div;
         }
