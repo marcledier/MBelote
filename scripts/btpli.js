@@ -186,6 +186,16 @@ class BtPli {
         return [...cartes].sort((c1, c2) => c2.pointcarte() - c1.pointcarte())[0];
     }
 
+    _contractstate(game) {
+        const preneurTeam = game.m_preneurid % 2;
+        const isPreneur   = game.m_donne.playerid % 2 === preneurTeam;
+        const preneurPts  = game.m_donne.points[preneurTeam];
+        const scored      = preneurPts + game.m_donne.points[1 - preneurTeam];
+        const remaining   = TOTAL_POINTS - scored;
+        const shortfall   = game.m_pari.point - preneurPts;
+        return { isPreneur, preneurPts, remaining, shortfall };
+    }
+
     meilleurecarte0(game, hand) {
         const clratout = game.m_pari.couleur;
         let couleurentame = -1;
@@ -252,6 +262,10 @@ class BtPli {
                         if (nonimpr.length > 0) return this.lapluschere(nonimpr);
                         return this.lapluschere(hand);
                     }
+                    // Partner is winning and cut risk is low: dump high card if it helps the score
+                    const cs = this._contractstate(game);
+                    if (cs.isPreneur && cs.shortfall > 0) return this.lapluschere(h);
+                    if (!cs.isPreneur && cs.shortfall <= cs.remaining) return this.lapluschere(h);
                     return this.lamoinschere(h);
                 }
                 if (this.risquedecoupe(game, this.m_couleurdemandee) > cutThreshold) return this.lamoinschere(g);
@@ -329,8 +343,17 @@ class BtPli {
         if (g.length > 1) {
             h = g.filter(c => c.m_couleur !== clratout);
             if (h.length === 0) {
+                // All winners are trump — decide whether to spend the Jack
                 const impr = this.cartesimprenables(g);
                 const nonimpr = g.filter(c => impr.indexOf(c) < 0);
+                const trickThreshold = BtAIParams?.play?.contractAware?.valuableTrickThreshold ?? 8;
+                const cs = this._contractstate(game);
+                // Use cheapest winning trump when the trick is already worth enough and
+                // we're ahead on the contract (preneur) or the contract is safe (defender)
+                const trickAlreadyValuable = this.m_points >= trickThreshold;
+                const saveBestTrump = trickAlreadyValuable &&
+                    (cs.isPreneur ? cs.shortfall <= 0 : cs.shortfall > cs.remaining);
+                if (saveBestTrump) return this.lamoinschere(g);
                 if (nonimpr.length > 0) return this.lapluschere(nonimpr);
                 return this.lapluschere(g);
             }

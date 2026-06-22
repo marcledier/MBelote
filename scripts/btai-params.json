@@ -1,13 +1,11 @@
 {
     "_comment": "AI parameters — loaded at runtime by btai.js. Change values here to tune AI behaviour without touching game code.",
-
     "game": {
         "version": "V0.1.01",
         "humanPlayer": 0,
         "scoreFinal": 1000,
         "testBetloop": false
     },
-
     "belote": {
         "acceptAtout": {
             "firstTurnThreshold": 100,
@@ -18,47 +16,74 @@
                 "pautreDoubleAbove": 10
             },
             "natoutBonuses": [
-                { "minNatout": 3, "bonus": 10 },
-                { "minNatout": 4, "bonus": 5 }
+                {
+                    "minNatout": 3,
+                    "bonus": 10
+                },
+                {
+                    "minNatout": 4,
+                    "bonus": 5
+                }
             ]
         }
     },
-
     "coinche": {
         "bid": {
             "minBidValue": 80,
-            "maxBidValue": 130,
             "bidStep": 10,
-            "minScoreToOpenBid": 70,
-            "scorePerBidStep": 8,
-            "maxBidCap": 160
+            "minScoreToOpen": 66,
+            "scorePerStep": 16,
+            "maxOpeningBid": 150
         },
         "complement": {
-            "partnerRaiseDivisor": 30,
-            "partnerMaxRaiseSteps": 2,
-            "partnerRaiseCap": 120
+            "raiseDivisor": 34,
+            "maxRaiseSteps": 2,
+            "raiseCap": 110,
+            "suitSwitchThreshold": 70,
+            "suitSwitchMargin": 24
         },
         "handScore": {
+            "jackBonus": 30,
+            "nineBonus": 18,
+            "topControlBonus": 10,
             "atoutLengthBonuses": [
-                { "minLength": 6, "bonus": 20 },
-                { "minLength": 5, "bonus": 12 },
-                { "minLength": 4, "bonus": 6 }
+                {
+                    "minLength": 7,
+                    "bonus": 25
+                },
+                {
+                    "minLength": 6,
+                    "bonus": 18
+                },
+                {
+                    "minLength": 5,
+                    "bonus": 12
+                },
+                {
+                    "minLength": 4,
+                    "bonus": 6
+                }
             ],
-            "nineAtoutBonus": 10,
-            "jackAtoutBonus": 5,
-            "singletonBonus": 4,
-            "voidBonus": 2,
-            "minPointValueToCount": 10
+            "voidBonus": 8,
+            "singletonBonus": 5,
+            "sideAceBonus": 8,
+            "sideTenBonus": 3,
+            "longSuitBonus": 4,
+            "longSuitMinLength": 4
         },
         "complementHandScore": {
-            "nineAtoutBonus": 10,
-            "jackAtoutBonus": 5,
-            "singletonBonus": 5,
-            "voidBonus": 3,
-            "minPointValueToCount": 10
+            "trumpSupportPts": 12,
+            "jackSupportBonus": 25,
+            "nineSupportBonus": 14,
+            "sideAceSupportBonus": 8,
+            "sideVoidSupportBonus": 6,
+            "sideSingletonSupportBonus": 4
+        },
+        "doubling": {
+            "minScoreToCoinche": 65,
+            "minScoreToSurcoinche": 55
         }
     },
-
     "play": {
         "cutRisk": {
             "opponentCanCutScore": 3,
@@ -71,6 +96,9 @@
         "lastTrick": {
             "couleurJoueesAtoutHighThreshold": 5,
             "couleurJoueesNonAtoutLowThreshold": 5
+        },
+        "contractAware": {
+            "valuableTrickThreshold": 8
         }
     }
 }

@@ -41,6 +41,12 @@ class BtMain {
         document.getElementById('btretourjeu')   .addEventListener('click', () => this.retourjeu());
         document.getElementById('btquitterpartie').addEventListener('click', () => { this.m_findepartie = true; this.retourjeu(); });
         document.getElementById('btrejouerdonne').addEventListener('click', () => this.replaydeal());
+        document.getElementById('bthintbtn').addEventListener('click', () => {
+            if (!this.m_hintcarte) return;
+            const img = this.m_hintcarte.m_image;
+            img.style.boxShadow = '0 0 0 4px gold, 0 0 16px 6px gold';
+            setTimeout(() => { img.style.boxShadow = ''; }, 2000);
+        });
         window.addEventListener('beforeunload', () => this.sauveretatdujeu());
 
         this.creationjeu();
@@ -161,7 +167,7 @@ class BtMain {
 
         this.m_donne = { playerid: 2, points: [0, 0], betturn: 0, couleurjouees: [0, 0, 0, 0], fin: false };
         this.updatescores();
-        this.m_pari = { point: -1, couleur: -1 };
+        this.m_pari = { point: -1, couleur: -1, doubled: 0 };
 
         this.m_donne.playerid = this.m_donneurid;
         this.joueursuivant();
@@ -407,16 +413,37 @@ class BtMain {
             this.m_waitforuser = true;
             this.showbidpanelcoinche();
         } else {
-            const pari = this.m_joueurs[this.m_donne.playerid].paricoinche(this);
-            if (pari.couleur >= 0) {
-                this.m_pari    = pari;
-                this.m_preneurid = this.m_donne.playerid;
+            const joueur = this.m_joueurs[this.m_donne.playerid];
+            const isOpponentOfPreneur = this.m_pari.couleur >= 0 && (this.m_donne.playerid % 2) !== (this.m_preneurid % 2);
+            const isPartnerOfPreneur  = this.m_pari.couleur >= 0 && (this.m_donne.playerid % 2) === (this.m_preneurid % 2) && this.m_donne.playerid !== this.m_preneurid;
+
+            if (isOpponentOfPreneur && this.m_pari.doubled === 0 && joueur.shouldcoinche(this)) {
+                this.m_pari.doubled = 1;
                 this.m_donne.betturn = 0;
-                const label = `${SUIT_NAMES[pari.couleur]} ${pari.point}`;
-                this.displaybulleinfo(label);
-                this.displayencherecourante();
-                this.addlogenchere(this.m_donne.playerid, label);
+                this.displaybulleinfo("Coinche !");
+                this.addlogenchere(this.m_donne.playerid, "Coinche !");
+            } else if (isPartnerOfPreneur && this.m_pari.doubled === 1 && joueur.shouldsurcoinche(this)) {
+                this.m_pari.doubled = 2;
+                this.m_donne.betturn = 0;
+                this.displaybulleinfo("Surcoinche !");
+                this.addlogenchere(this.m_donne.playerid, "Surcoinche !");
+            } else if (this.m_pari.doubled === 0) {
+                const pari = joueur.paricoinche(this);
+                if (pari.couleur >= 0) {
+                    this.m_pari    = { ...pari, doubled: 0 };
+                    this.m_preneurid = this.m_donne.playerid;
+                    this.m_donne.betturn = 0;
+                    const label = `${SUIT_NAMES[pari.couleur]} ${pari.point}`;
+                    this.displaybulleinfo(label);
+                    this.displayencherecourante();
+                    this.addlogenchere(this.m_donne.playerid, label);
+                } else {
+                    this.displaybulleinfo("Passe");
+                    this.m_donne.betturn++;
+                    this.addlogenchere(this.m_donne.playerid, "Passe");
+                }
             } else {
+                // doubled >= 1 and this player can't coinche/surcoinche: forced pass
                 this.displaybulleinfo("Passe");
                 this.m_donne.betturn++;
                 this.addlogenchere(this.m_donne.playerid, "Passe");
@@ -445,46 +472,49 @@ class BtMain {
         panel.style.cssText = 'position:absolute;z-index:100;background:rgba(0,0,50,0.92);border-radius:8px;padding:8px;color:white;font-size:13px;';
         document.getElementById('btplateauplis').appendChild(panel);
 
-        // Suit buttons
-        const suitrow = document.createElement('div');
-        suitrow.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;justify-content:center';
-        SUIT_NAMES.forEach((name, idx) => {
-            const btn = document.createElement('button');
-            btn.style.cssText = 'flex:1;padding:4px 6px;cursor:pointer;border-radius:4px;border:none;background:#336;color:white;font-weight:bold';
-            btn.textContent = name;
-            btn.className = 'btsuit-btn';
-            btn.addEventListener('click', e => {
-                e.stopPropagation();
-                panel.querySelectorAll('.btsuit-btn').forEach(b => { b.style.background = '#336'; });
-                btn.style.background = '#c80';
-                bidData.selsuit = idx;
-            });
-            suitrow.appendChild(btn);
-        });
-        panel.appendChild(suitrow);
-
-        // Bid value buttons
-        const bidrow = document.createElement('div');
-        bidrow.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;justify-content:center';
-        bids.forEach(val => {
-            const disabled = val < minbid;
-            const btn = document.createElement('button');
-            btn.style.cssText = `padding:4px 8px;border-radius:4px;border:none;cursor:pointer;${disabled ? 'background:#444;color:#888;' : 'background:#336;color:white;'}`;
-            btn.textContent = val;
-            if (!disabled) {
-                btn.className = 'btbid-btn';
+        // Suit and bid rows only make sense when the contract hasn't been doubled yet
+        if (this.m_pari.doubled === 0) {
+            // Suit buttons
+            const suitrow = document.createElement('div');
+            suitrow.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;justify-content:center';
+            SUIT_NAMES.forEach((name, idx) => {
+                const btn = document.createElement('button');
+                btn.style.cssText = 'flex:1;padding:4px 6px;cursor:pointer;border-radius:4px;border:none;background:#336;color:white;font-weight:bold';
+                btn.textContent = name;
+                btn.className = 'btsuit-btn';
                 btn.addEventListener('click', e => {
                     e.stopPropagation();
-                    panel.querySelectorAll('.btbid-btn').forEach(b => { b.style.background = '#336'; });
+                    panel.querySelectorAll('.btsuit-btn').forEach(b => { b.style.background = '#336'; });
                     btn.style.background = '#c80';
-                    bidData.selbid = val;
+                    bidData.selsuit = idx;
                 });
-            }
-            bidrow.appendChild(btn);
-        });
-        panel.appendChild(bidrow);
+                suitrow.appendChild(btn);
+            });
+            panel.appendChild(suitrow);
 
-        // Confirm + Passe
+            // Bid value buttons
+            const bidrow = document.createElement('div');
+            bidrow.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;justify-content:center';
+            bids.forEach(val => {
+                const disabled = val < minbid;
+                const btn = document.createElement('button');
+                btn.style.cssText = `padding:4px 8px;border-radius:4px;border:none;cursor:pointer;${disabled ? 'background:#444;color:#888;' : 'background:#336;color:white;'}`;
+                btn.textContent = val;
+                if (!disabled) {
+                    btn.className = 'btbid-btn';
+                    btn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        panel.querySelectorAll('.btbid-btn').forEach(b => { b.style.background = '#336'; });
+                        btn.style.background = '#c80';
+                        bidData.selbid = val;
+                    });
+                }
+                bidrow.appendChild(btn);
+            });
+            panel.appendChild(bidrow);
+        }
+
+        // Confirm + Passe + optional Coinche/Surcoinche
         const actrow = document.createElement('div');
         actrow.style.cssText = 'display:flex;gap:6px;justify-content:center';
 
@@ -496,7 +526,7 @@ class BtMain {
             if (bidData.selsuit === undefined || bidData.selbid === undefined) return;
             panel.remove();
             this.m_waitforuser = false;
-            this.m_pari      = { couleur: bidData.selsuit, point: bidData.selbid };
+            this.m_pari      = { couleur: bidData.selsuit, point: bidData.selbid, doubled: 0 };
             this.m_preneurid = this.m_donne.playerid;
             this.m_donne.betturn = 0;
             const announced = `${SUIT_NAMES[bidData.selsuit]} ${bidData.selbid}`;
@@ -512,8 +542,84 @@ class BtMain {
         passebtn.textContent = 'Passe';
         passebtn.addEventListener('click', e => { e.stopPropagation(); panel.remove(); this.parisudpassecoinche(); });
 
-        actrow.appendChild(confirmbtn);
         actrow.appendChild(passebtn);
+
+        // Confirm button only when no coinche has been announced yet
+        if (this.m_pari.doubled === 0) actrow.appendChild(confirmbtn);
+
+        // Coinche button: human is opponent of preneur and contract is not yet doubled
+        const humanIsOpponent = this.m_pari.couleur >= 0 && (BtMain.c_humanplayer % 2) !== (this.m_preneurid % 2);
+        if (humanIsOpponent && this.m_pari.doubled === 0) {
+            const coinchebtn = document.createElement('button');
+            coinchebtn.style.cssText = 'padding:5px 14px;border-radius:4px;border:none;background:#660;color:white;font-weight:bold;cursor:pointer';
+            coinchebtn.textContent = 'Coinche !';
+            coinchebtn.addEventListener('click', e => {
+                e.stopPropagation();
+                panel.remove();
+                this.m_waitforuser = false;
+                this.m_pari.doubled = 1;
+                this.m_donne.betturn = 0;
+                this.addlogenchere(this.m_donne.playerid, "Coinche !");
+                this.displaybulleinfo("Coinche !");
+                this.joueursuivant();
+                this._scheduleEvent('btbetloopcoinche');
+            });
+            actrow.appendChild(coinchebtn);
+        }
+
+        // Surcoinche button: human is partner of preneur and contract is already doubled
+        const humanIsPartner = this.m_pari.couleur >= 0 && BtMain.c_humanplayer !== this.m_preneurid && (BtMain.c_humanplayer % 2) === (this.m_preneurid % 2);
+        if (humanIsPartner && this.m_pari.doubled === 1) {
+            const surcoinchebtn = document.createElement('button');
+            surcoinchebtn.style.cssText = 'padding:5px 14px;border-radius:4px;border:none;background:#660;color:white;font-weight:bold;cursor:pointer';
+            surcoinchebtn.textContent = 'Surcoinche !';
+            surcoinchebtn.addEventListener('click', e => {
+                e.stopPropagation();
+                panel.remove();
+                this.m_waitforuser = false;
+                this.m_pari.doubled = 2;
+                this.m_donne.betturn = 0;
+                this.addlogenchere(this.m_donne.playerid, "Surcoinche !");
+                this.displaybulleinfo("Surcoinche !");
+                this.joueursuivant();
+                this._scheduleEvent('btbetloopcoinche');
+            });
+            actrow.appendChild(surcoinchebtn);
+        }
+
+        // Conseil ? hint button
+        const hintbtn = document.createElement('button');
+        hintbtn.style.cssText = 'padding:4px 9px;border-radius:50%;border:none;background:rgba(0,80,0,0.6);color:white;font-weight:bold;font-size:14px;cursor:pointer;opacity:0.7;';
+        hintbtn.textContent = '?';
+        hintbtn.addEventListener('click', e => {
+            e.stopPropagation();
+            const humanJoueur = this.m_joueurs[BtMain.c_humanplayer];
+            let hint;
+            const humanIsPartner = this.m_pari.couleur >= 0 && BtMain.c_humanplayer !== this.m_preneurid && (BtMain.c_humanplayer % 2) === (this.m_preneurid % 2);
+            const humanIsOpponent = this.m_pari.couleur >= 0 && (BtMain.c_humanplayer % 2) !== (this.m_preneurid % 2);
+            if (this.m_pari.doubled === 1 && humanIsPartner) {
+                hint = humanJoueur.shouldsurcoinche(this) ? 'Surcoinche !' : 'Passe';
+            } else if (this.m_pari.doubled === 0 && humanIsOpponent && humanJoueur.shouldcoinche(this)) {
+                hint = 'Coinche !';
+            } else if (this.m_pari.doubled === 0) {
+                const pari = humanJoueur.paricoinche(this);
+                hint = pari.couleur >= 0 ? `${SUIT_NAMES[pari.couleur]} ${pari.point}` : 'Passe';
+            } else {
+                hint = 'Passe';
+            }
+            let lbl = panel.querySelector('.bthintlabel');
+            if (!lbl) {
+                lbl = document.createElement('div');
+                lbl.className = 'bthintlabel';
+                lbl.style.cssText = 'text-align:center;color:#8f8;margin-top:6px;font-size:12px;font-weight:bold;';
+                panel.appendChild(lbl);
+            }
+            lbl.textContent = 'IA : ' + hint;
+            clearTimeout(lbl._t);
+            lbl._t = setTimeout(() => { lbl.textContent = ''; }, 3000);
+        });
+        actrow.appendChild(hintbtn);
+
         panel.appendChild(actrow);
 
         const { w: tapisw, h: tapish } = this._getBoardDimensions();
@@ -623,8 +729,9 @@ class BtMain {
                 autoplay = allowed.length === 1;
             }
             if (!autoplay) {
+                this.m_hintcarte = this.m_pliencours.meilleurecarte(this);
+                document.getElementById('bthintbtn').style.display = '';
                 this.m_waitforuser = true;
-                console.log(this.m_pliencours.meilleurecarte(this).displayname());
             } else {
                 const bestcarte = this.m_pliencours.meilleurecarte(this);
                 if (!bestcarte) { console.log("[playloop] meilleurecarte returned null"); return; }
@@ -716,23 +823,26 @@ class BtMain {
         this.m_joueurs.forEach(joueur => { if (joueur.m_belote >= 0) eqpbelote = joueur.m_id % 2; });
         if (eqpbelote >= 0) this.m_donne.points[eqpbelote] += BELOTE_BONUS;
 
-        const eqppreneur = this.m_preneurid % 2;
-        const contrat    = this.m_pari.point;
-        const ptpreneur  = this.m_donne.points[eqppreneur];
-        let btmessage    = PLAYER_NAMES[this.m_preneurid];
+        const multiplier  = this.m_pari.doubled === 2 ? 4 : this.m_pari.doubled === 1 ? 2 : 1;
+        const eqppreneur  = this.m_preneurid % 2;
+        const contrat     = this.m_pari.point;
+        const ptpreneur   = this.m_donne.points[eqppreneur];
+        let btmessage     = PLAYER_NAMES[this.m_preneurid];
+        const doubleSuffix = this.m_pari.doubled === 2 ? ' (surcoinché)' : this.m_pari.doubled === 1 ? ' (coinché)' : '';
 
         if (ptpreneur >= contrat) {
-            this.m_totaux[eqppreneur]     += contrat;
-            this.m_totaux[1 - eqppreneur] += this.m_donne.points[1 - eqppreneur];
-            btmessage += ` a réussi son contrat (${contrat})`;
+            this.m_totaux[eqppreneur]     += contrat * multiplier;
+            this.m_totaux[1 - eqppreneur] += this.m_donne.points[1 - eqppreneur] * multiplier;
+            btmessage += ` a réussi son contrat (${contrat})${doubleSuffix}`;
         } else {
+            const penalty = (160 + contrat) * multiplier;
             if (eqppreneur === eqpbelote) {
-                this.m_totaux[1 - eqppreneur] += 160 + contrat;
+                this.m_totaux[1 - eqppreneur] += penalty;
                 this.m_totaux[eqppreneur]     += BELOTE_BONUS;
             } else {
-                this.m_totaux[1 - eqppreneur] += 160 + contrat;
+                this.m_totaux[1 - eqppreneur] += penalty;
             }
-            btmessage += ` a chuté son contrat de ${contrat} !`;
+            btmessage += ` a chuté son contrat de ${contrat}${doubleSuffix} !`;
         }
         this.m_donne.playerid = 2;
         this.updatescores();
@@ -820,6 +930,8 @@ class BtMain {
             const allowed = this.m_pliencours.cartesautorisees(this.m_joueurs[BtMain.c_humanplayer], this.m_pari.couleur);
             if (allowed.indexOf(card) < 0) { this.displaybulleinfo("Carte invalide !"); return; }
             this.m_waitforuser = false;
+            this.m_hintcarte = null;
+            document.getElementById('bthintbtn').style.display = 'none';
             this.jouercarte(card);
             this._scheduleEvent('btplayloop');
         }
@@ -884,15 +996,15 @@ class BtMain {
             btcoinche:    g('btcoinche').checked
         };
         localStorage.setItem('mlrdev.belote.btoptions', JSON.stringify(jsdata));
-        if (jsdata.btcoinche !== coincheBefore) {
-            this.applyoptions();
+        this.applyoptions();
+        if (jsdata.btcoinche !== coincheBefore || !this.m_plis || !this.m_plis.length) {
+            // Game type changed or no deal in progress yet: start fresh
             this.clearboard();
             $(':mobile-pagecontainer').pagecontainer('change', '#btpage0', { transition: "fade" });
             document.dispatchEvent(new Event('btnouvellepartie'));
-            return;
+        } else {
+            this.retourjeu();
         }
-        this.applyoptions();
-        this.retourjeu();
     }
 
     // ── Sizing ─────────────────────────────────────────────────────────────────
@@ -960,7 +1072,15 @@ class BtMain {
 
     reprisedujeu() {
         this.m_findepartie = false;
-        document.dispatchEvent(new Event('btnouvellepartie'));
+        // Show options first so the player can pick game type before the first deal
+        const saved = localStorage.getItem('mlrdev.belote.btoptions');
+        if (saved) {
+            // Returning player: resume directly
+            document.dispatchEvent(new Event('btnouvellepartie'));
+        } else {
+            // First launch (no saved prefs): go to options page
+            $(':mobile-pagecontainer').pagecontainer('change', '#btpage2', { transition: "fade" });
+        }
     }
 
     // ── Icon positioning ───────────────────────────────────────────────────────

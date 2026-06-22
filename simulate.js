@@ -13,6 +13,7 @@ var vm   = require('vm');
 var _triggerStack = [];
 var _docHandlers  = {};
 
+var _noopPromise = { then: function () { return _noopPromise; } };
 var _fakeEl = {
     addEventListener: function () {},
     removeEventListener: function () {},
@@ -21,7 +22,8 @@ var _fakeEl = {
     querySelectorAll: function () { return { forEach: function () {} }; },
     cloneNode:     function () { return _fakeEl; },
     insertAdjacentHTML: function () {},
-    animate: function () { return { finished: Promise.resolve() }; },
+    animate: function () { return { finished: _noopPromise }; },
+    getAnimations: function () { return []; },
     remove:  function () {},
     removeAttribute: function () {},
     setAttribute: function () {},
@@ -85,6 +87,9 @@ function loadScript(file) {
 }
 
 loadScript('btcarte.js');
+// Provide BtAIParams from the JSON file (btai.js uses XHR which doesn't work in Node)
+global.BtAIParams = JSON.parse(fs.readFileSync(path.join(__dirname, 'scripts', 'btai-params.json'), 'utf8'));
+global.window.BtAIParams = global.BtAIParams;
 loadScript('btjoueur.js');
 loadScript('btpli.js');
 loadScript('BtMain.js');

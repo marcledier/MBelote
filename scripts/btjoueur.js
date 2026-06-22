@@ -57,110 +57,141 @@ class BtJoueur {
     }
 
     _scoremaincoinche(attcol) {
-        let score = 0;
         const p = BtAIParams?.coinche?.handScore ?? {};
-        const atoutLengthBonuses = p.atoutLengthBonuses ?? [{ minLength: 6, bonus: 20 }, { minLength: 5, bonus: 12 }, { minLength: 4, bonus: 6 }];
-        const nineBonus     = p.nineAtoutBonus       ?? 10;
-        const jackBonus     = p.jackAtoutBonus        ?? 5;
-        const singletonPts  = p.singletonBonus        ?? 4;
-        const voidPts       = p.voidBonus             ?? 2;
-        const minPtToCount  = p.minPointValueToCount  ?? 10;
+        const jackBonus         = p.jackBonus           ?? 30;
+        const nineBonus         = p.nineBonus           ?? 18;
+        const topControlBonus   = p.topControlBonus     ?? 10;
+        const atoutLengthBonuses = p.atoutLengthBonuses ?? [{ minLength: 7, bonus: 25 }, { minLength: 6, bonus: 18 }, { minLength: 5, bonus: 12 }, { minLength: 4, bonus: 6 }];
+        const voidBonus         = p.voidBonus           ?? 8;
+        const singletonBonus    = p.singletonBonus      ?? 5;
+        const sideAceBonus      = p.sideAceBonus        ?? 8;
+        const sideTenBonus      = p.sideTenBonus        ?? 3;
+        const longSuitBonus     = p.longSuitBonus       ?? 4;
+        const longSuitMinLen    = p.longSuitMinLength   ?? 4;
 
         const atouts = this.m_cartesparcouleur[attcol];
-
+        let trumpScore = 0;
+        let hasJack = false, hasNine = false;
         atouts.forEach(c => {
-            score += c.pointcarte(true);
-            if (c.m_valeur === 2) score += nineBonus;
-            if (c.m_valeur === 4) score += jackBonus;
+            if (c.m_valeur === 4) { trumpScore += jackBonus; hasJack = true; }
+            else if (c.m_valeur === 2) { trumpScore += nineBonus; hasNine = true; }
+            else trumpScore += c.pointcarte(true);
         });
+        if (hasJack && hasNine) trumpScore += topControlBonus;
         for (const { minLength, bonus } of atoutLengthBonuses) {
-            if (atouts.length >= minLength) { score += bonus; break; }
+            if (atouts.length >= minLength) { trumpScore += bonus; break; }
         }
+
+        let sideScore = 0;
+        for (let col = 0; col < 4; col++) {
+            if (col === attcol) continue;
+            const ncol = this.m_cartesparcouleur[col];
+            if (ncol.length === 0) { sideScore += voidBonus; continue; }
+            if (ncol.length === 1) sideScore += singletonBonus;
+            ncol.forEach(c => {
+                if (c.m_valeur === 7) sideScore += sideAceBonus;
+                else if (c.m_valeur === 3) sideScore += sideTenBonus;
+            });
+            if (ncol.length >= longSuitMinLen) sideScore += longSuitBonus;
+        }
+        return trumpScore + sideScore;
+    }
+
+    _scoremaincomplement(attcol) {
+        const p = BtAIParams?.coinche?.complementHandScore ?? {};
+        const trumpSupportPts      = p.trumpSupportPts         ?? 12;
+        const jackSupportBonus     = p.jackSupportBonus        ?? 25;
+        const nineSupportBonus     = p.nineSupportBonus        ?? 14;
+        const sideAceSupportBonus  = p.sideAceSupportBonus    ?? 8;
+        const sideVoidBonus        = p.sideVoidSupportBonus   ?? 6;
+        const sideSingletonBonus   = p.sideSingletonSupportBonus ?? 4;
+
+        const atouts = this.m_cartesparcouleur[attcol];
+        if (atouts.length === 0) return 0;
+
+        let score = atouts.length * trumpSupportPts;
+        atouts.forEach(c => {
+            if (c.m_valeur === 4) score += jackSupportBonus;
+            else if (c.m_valeur === 2) score += nineSupportBonus;
+        });
 
         for (let col = 0; col < 4; col++) {
             if (col === attcol) continue;
             const ncol = this.m_cartesparcouleur[col];
-            ncol.forEach(c => {
-                const pt = c.pointcarte(false);
-                if (pt >= minPtToCount) score += pt;
-            });
-            if (ncol.length === 1) score += singletonPts;
-            if (ncol.length === 0) score += voidPts;
-        }
-        return score;
-    }
-
-    _scoremaincomplement(attcol) {
-        let score = 0;
-        const p = BtAIParams?.coinche?.complementHandScore ?? {};
-        const nineBonus    = p.nineAtoutBonus      ?? 10;
-        const jackBonus    = p.jackAtoutBonus      ?? 5;
-        const singletonPts = p.singletonBonus      ?? 5;
-        const voidPts      = p.voidBonus           ?? 3;
-        const minPtToCount = p.minPointValueToCount ?? 10;
-
-        for (let col = 0; col < 4; col++) {
-            const ncol = this.m_cartesparcouleur[col];
-            if (col === attcol) {
-                ncol.forEach(c => {
-                    score += c.pointcarte(true);
-                    if (c.m_valeur === 2) score += nineBonus;
-                    if (c.m_valeur === 4) score += jackBonus;
-                });
-            } else {
-                ncol.forEach(c => {
-                    const pt = c.pointcarte(false);
-                    if (pt >= minPtToCount) score += pt;
-                });
-                if (ncol.length === 1) score += singletonPts;
-                if (ncol.length === 0) score += voidPts;
-            }
+            if (ncol.length === 0) { score += sideVoidBonus; continue; }
+            if (ncol.length === 1) score += sideSingletonBonus;
+            ncol.forEach(c => { if (c.m_valeur === 7) score += sideAceSupportBonus; });
         }
         return score;
     }
 
     paricoinche(game) {
-        const p = BtAIParams?.coinche?.bid ?? {};
-        const minBidValue      = p.minBidValue      ?? 80;
-        const maxBidValue      = p.maxBidValue      ?? 130;
-        const bidStep          = p.bidStep          ?? 10;
-        const minScoreToOpen   = p.minScoreToOpenBid ?? 70;
-        const scorePerStep     = p.scorePerBidStep  ?? 8;
-        const maxBidCap        = p.maxBidCap        ?? 160;
-
+        const p  = BtAIParams?.coinche?.bid        ?? {};
         const pc = BtAIParams?.coinche?.complement ?? {};
-        const raiseDivisor = pc.partnerRaiseDivisor ?? 30;
-        const maxSteps     = pc.partnerMaxRaiseSteps ?? 2;
-        const raiseCap     = pc.partnerRaiseCap      ?? 120;
+        const minBidValue    = p.minBidValue     ?? 80;
+        const bidStep        = p.bidStep         ?? 10;
+        const minScoreToOpen = p.minScoreToOpen  ?? 55;
+        const scorePerStep   = p.scorePerStep    ?? 12;
+        const maxOpeningBid  = p.maxOpeningBid   ?? 160;
+        const raiseDivisor   = pc.raiseDivisor   ?? 20;
+        const maxRaiseSteps  = pc.maxRaiseSteps  ?? 3;
+        const raiseCap       = pc.raiseCap       ?? 150;
+        const switchThreshold = pc.suitSwitchThreshold ?? 60;
+        const switchMargin   = pc.suitSwitchMargin     ?? 15;
 
         const partnerid    = (this.m_id + 2) % 4;
         const partnerleads = (game.m_pari.couleur >= 0 && game.m_preneurid === partnerid);
-        let bid;
+        const minbid       = (game.m_pari.point > 0 ? game.m_pari.point + bidStep : minBidValue);
 
         if (partnerleads) {
-            const compscore = this._scoremaincomplement(game.m_pari.couleur);
-            const steps = Math.min(maxSteps, Math.floor(compscore / raiseDivisor));
+            const supportScore = this._scoremaincomplement(game.m_pari.couleur);
+
+            // Consider switching to own suit if it's significantly stronger
+            let ownBestCol = -1, ownBestScore = -1;
+            for (let col = 0; col < 4; col++) {
+                if (col === game.m_pari.couleur) continue;
+                const s = this._scoremaincoinche(col);
+                if (s > ownBestScore) { ownBestScore = s; ownBestCol = col; }
+            }
+            if (ownBestScore >= switchThreshold && ownBestScore > supportScore + switchMargin) {
+                const bid = Math.min(maxOpeningBid, minBidValue + Math.floor((ownBestScore - minScoreToOpen) / scorePerStep) * bidStep);
+                if (bid >= minbid) return { couleur: ownBestCol, point: bid };
+            }
+
+            const steps = Math.min(maxRaiseSteps, Math.floor(supportScore / raiseDivisor));
             if (steps === 0) return { couleur: -1 };
-            bid = Math.min(raiseCap, game.m_pari.point + steps * bidStep);
-            if (bid <= game.m_pari.point) return { couleur: -1 };
+            const bid = Math.min(raiseCap, game.m_pari.point + steps * bidStep);
+            if (bid < minbid) return { couleur: -1 };
             return { couleur: game.m_pari.couleur, point: bid };
         }
 
         const opponentcouleur = (game.m_pari.couleur >= 0 && !partnerleads) ? game.m_pari.couleur : -1;
-        let bestcouleur = -1;
-        let bestscore   = -1;
+        let bestcouleur = -1, bestscore = -1;
         for (let attcol = 0; attcol < 4; attcol++) {
             if (attcol === opponentcouleur) continue;
             const score = this._scoremaincoinche(attcol);
             if (score > bestscore) { bestscore = score; bestcouleur = attcol; }
         }
 
-        const minbid = (game.m_pari.point > 0 ? game.m_pari.point + bidStep : minBidValue);
-        if (minbid > maxBidCap || bestscore < minScoreToOpen) return { couleur: -1 };
-
-        bid = Math.min(maxBidValue, minBidValue + Math.floor((bestscore - minScoreToOpen) / scorePerStep) * bidStep);
+        if (minbid > maxOpeningBid || bestscore < minScoreToOpen) return { couleur: -1 };
+        const bid = Math.min(maxOpeningBid, minBidValue + Math.floor((bestscore - minScoreToOpen) / scorePerStep) * bidStep);
         if (bid < minbid) return { couleur: -1 };
         return { couleur: bestcouleur, point: bid };
+    }
+
+    shouldcoinche(game) {
+        const pd = BtAIParams?.coinche?.doubling ?? {};
+        const minScore = pd.minScoreToCoinche ?? 65;
+        // Score our hand as if opponent's trump were ours — measures defensive control
+        const score = this._scoremaincoinche(game.m_pari.couleur);
+        return score >= minScore;
+    }
+
+    shouldsurcoinche(game) {
+        const pd = BtAIParams?.coinche?.doubling ?? {};
+        const minScore = pd.minScoreToSurcoinche ?? 55;
+        const score = this._scoremaincomplement(game.m_pari.couleur);
+        return score >= minScore;
     }
 
     acceptatout(carteatout, bfirstturn) {
