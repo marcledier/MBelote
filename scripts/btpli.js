@@ -167,6 +167,10 @@ class BtPli {
     }
 
     cartesimprenables(cartes) {
+        if (cartes.length === 0) {
+            alert("Erreur : aucune carte dans cartesimprenables");
+            return [];
+        }
         return cartes.filter(carte => {
             let scard = carte;
             while ((scard = scard.m_supcarte)) {
@@ -177,11 +181,19 @@ class BtPli {
     }
 
     lamoinschere(cartes) {
+        if (cartes.length === 0) {
+            alert("Erreur : aucune carte dans lamoinschere");
+            return null;
+        }
         if (cartes.length === 1) return cartes[0];
         return [...cartes].sort((c1, c2) => c1.pointcarte() - c2.pointcarte())[0];
     }
 
     lapluschere(cartes) {
+        if (cartes.length === 0) {
+            alert("Erreur : aucune carte dans lapluschere");
+            return null;
+        }
         if (cartes.length === 1) return cartes[0];
         return [...cartes].sort((c1, c2) => c2.pointcarte() - c1.pointcarte())[0];
     }

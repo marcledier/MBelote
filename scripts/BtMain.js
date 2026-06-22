@@ -38,6 +38,10 @@ class BtMain {
         document.getElementById('btplateauplis') .addEventListener('click', e  => this.clicktapis(e));
         document.getElementById('btcartessud')   .addEventListener('click', e  => this.clickcartesud(e));
         document.getElementById('btvalidateoptions').addEventListener('click', () => this.validateoptions());
+        document.getElementById('btcoinche').addEventListener('change', function() {
+            const row = document.getElementById('btdefensepointsrow');
+            if (row) row.style.display = this.checked ? '' : 'none';
+        });
         document.getElementById('btretourjeu')   .addEventListener('click', () => this.retourjeu());
         document.getElementById('btquitterpartie').addEventListener('click', () => { this.m_findepartie = true; this.retourjeu(); });
         document.getElementById('btrejouerdonne').addEventListener('click', () => this.replaydeal());
@@ -832,7 +836,8 @@ class BtMain {
 
         if (ptpreneur >= contrat) {
             this.m_totaux[eqppreneur]     += contrat * multiplier;
-            this.m_totaux[1 - eqppreneur] += this.m_donne.points[1 - eqppreneur] * multiplier;
+            if (BtMain.BTDEFENSEPOINTS)
+                this.m_totaux[1 - eqppreneur] += this.m_donne.points[1 - eqppreneur] * multiplier;
             btmessage += ` a réussi son contrat (${contrat})${doubleSuffix}`;
         } else {
             const penalty = (160 + contrat) * multiplier;
@@ -951,17 +956,19 @@ class BtMain {
             BtMain.BTSENSINVERSE    = jsdata.btsenshoraire  || false;
             BtMain.BTAUTOPLAYLAST   = jsdata.btautolast     || false;
             BtMain.BTAUTOPLAYUNIQ   = jsdata.btautouniq     || false;
-            BtMain.BTCOINCHE        = jsdata.btcoinche      || false;
-            BtMain.BTFULLAUTO       = jsdata.btjeuauto      || false;
+            BtMain.BTCOINCHE        = jsdata.btcoinche        || false;
+            BtMain.BTDEFENSEPOINTS  = jsdata.btdefensepoints !== undefined ? jsdata.btdefensepoints : true;
+            BtMain.BTFULLAUTO       = jsdata.btjeuauto        || false;
         } else {
-            BtCarte.CARTEWIDTH    = 100;
-            BtMain.BTDELAY        = 800;
-            BtMain.BTSCOREFINAL   = BtAIParams?.game?.scoreFinal ?? 1000;
-            BtMain.BTSENSINVERSE  = false;
-            BtMain.BTAUTOPLAYLAST = false;
-            BtMain.BTAUTOPLAYUNIQ = false;
-            BtMain.BTCOINCHE      = false;
-            BtMain.BTFULLAUTO     = false;
+            BtCarte.CARTEWIDTH      = 100;
+            BtMain.BTDELAY          = 800;
+            BtMain.BTSCOREFINAL     = BtAIParams?.game?.scoreFinal ?? 1000;
+            BtMain.BTSENSINVERSE    = false;
+            BtMain.BTAUTOPLAYLAST   = false;
+            BtMain.BTAUTOPLAYUNIQ   = false;
+            BtMain.BTCOINCHE        = false;
+            BtMain.BTDEFENSEPOINTS  = true;
+            BtMain.BTFULLAUTO       = false;
         }
 
         const g = id => document.getElementById(id);
@@ -972,6 +979,8 @@ class BtMain {
         if (g('btautouniq'))   g('btautouniq').checked   = BtMain.BTAUTOPLAYUNIQ;
         if (g('btjeuauto'))    g('btjeuauto').checked    = BtMain.BTFULLAUTO;
         if (g('btcoinche'))    g('btcoinche').checked    = BtMain.BTCOINCHE;
+        if (g('btdefensepoints')) g('btdefensepoints').checked = BtMain.BTDEFENSEPOINTS;
+        if (g('btdefensepointsrow')) g('btdefensepointsrow').style.display = BtMain.BTCOINCHE ? '' : 'none';
 
         if (olddirection !== undefined && BtMain.BTSENSINVERSE !== olddirection) {
             document.getElementById('btactionbutton')?.remove();
@@ -993,7 +1002,8 @@ class BtMain {
             btautolast:   g('btautolast').checked,
             btautouniq:   g('btautouniq').checked,
             btjeuauto:    g('btjeuauto').checked,
-            btcoinche:    g('btcoinche').checked
+            btcoinche:    g('btcoinche').checked,
+            btdefensepoints: g('btdefensepoints') ? g('btdefensepoints').checked : true
         };
         localStorage.setItem('mlrdev.belote.btoptions', JSON.stringify(jsdata));
         this.applyoptions();
