@@ -68,31 +68,37 @@
         <header data-role="header">
             <a href="#btpage1" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left">Retour</a>
             <h1>Options</h1>
+            <div id="btrejouerdonne" class="ui-btn ui-btn-inline ui-shadow ui-corner-all">Rejouer Donne</div>
         </header>
         <main data-role="main" class="ui-content">
+            <h3>En cours de partie</h3>
             <label for="btdelay">Délai (ms)</label>
             <input type="number" id="btdelay" value="800" min="100" max="3000" step="100">
             <label for="btcardwidth">Largeur carte (px)</label>
             <input type="number" id="btcardwidth" value="100" min="50" max="200" step="10">
-            <label for="btsenshoraire">Sens horaire</label>
-            <input type="checkbox" id="btsenshoraire" data-role="flipswitch">
             <label for="btautolast">Jouer la dernière carte auto.</label>
             <input type="checkbox" id="btautolast" data-role="flipswitch">
             <label for="btautouniq">Jouer seule carte valide auto.</label>
             <input type="checkbox" id="btautouniq" data-role="flipswitch">
             <label for="btjeuauto">Jeu entier automatique</label>
             <input type="checkbox" id="btjeuauto" data-role="flipswitch">
+            <a id="btapplyoptions" class="ui-btn ui-corner-all ui-shadow">Appliquer</a>
+            <h3>Nouvelle partie</h3>
+            <label for="btsenshoraire">Sens horaire</label>
+            <input type="checkbox" id="btsenshoraire" data-role="flipswitch">
             <label for="btcoinche">Mode Coinche</label>
             <input type="checkbox" id="btcoinche" data-role="flipswitch">
-            <div id="btdefensepointsrow" style="display:none">
+            <div id="btdefensepointsrow">
                 <label for="btdefensepoints">Compter les points de la défense</label>
                 <input type="checkbox" id="btdefensepoints" data-role="flipswitch">
             </div>
-            <a id="btvalidateoptions" class="ui-btn ui-corner-all ui-shadow">Valider</a>
+            <div id="btblitzrow">
+                <label for="btblitz">Mode Blitz (enchères à partir de 120)</label>
+                <input type="checkbox" id="btblitz" data-role="flipswitch">
+            </div>
+            <a id="btnewgameoptions" class="ui-btn ui-corner-all ui-shadow">Nouvelle partie</a>
         </main>
-        <footer data-role="footer" data-position="fixed">
-            <div id="btrejouerdonne" class="ui-btn ui-corner-all ui-shadow">Rejouer Donne</div>
-        </footer>
+        <footer data-role="footer" data-position="fixed"></footer>
     </div>
 
     <div id="btpage3" data-role="page" data-theme="b">

@@ -33,12 +33,16 @@
             "bidStep": 10,
             "minScoreToOpen": 66,
             "scorePerStep": 16,
-            "maxOpeningBid": 150
+            "maxOpeningBid": 180,
+            "capotThreshold": 120,
+            "opponentPressureFactor": 1.5,
+            "partnerPassPenalty": 8
         },
         "complement": {
             "raiseDivisor": 34,
             "maxRaiseSteps": 2,
             "raiseCap": 110,
+            "partnerBidBonus": 10,
             "suitSwitchThreshold": 70,
             "suitSwitchMargin": 24
         },

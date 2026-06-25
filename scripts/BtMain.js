@@ -9,6 +9,7 @@ const TOTAL_POINTS     = 152;
 const CAPOT_BONUS      = 100;
 const BELOTE_BONUS     = 20;
 const LAST_TRICK_BONUS = 10;
+const CAPOT_CONTRACT   = 252;
 
 class BtMain {
     // ── Static config (replaces BtMain.prototype.X and BtMain.c_X) ────────────
@@ -37,10 +38,16 @@ class BtMain {
         document.getElementById('btreplaydeal')  .addEventListener('click', () => this.replaydeal());
         document.getElementById('btplateauplis') .addEventListener('click', e  => this.clicktapis(e));
         document.getElementById('btcartessud')   .addEventListener('click', e  => this.clickcartesud(e));
-        document.getElementById('btvalidateoptions').addEventListener('click', () => this.validateoptions());
-        document.getElementById('btcoinche').addEventListener('change', function() {
-            const row = document.getElementById('btdefensepointsrow');
-            if (row) row.style.display = this.checked ? '' : 'none';
+        document.getElementById('btapplyoptions').addEventListener('click', () => this.applyliveoptions());
+        document.getElementById('btnewgameoptions').addEventListener('click', () => this.newgameoptions());
+        $(document).on('change', '#btcoinche', function() {
+            const enabled = this.checked;
+            $('#btdefensepoints').flipswitch(enabled ? 'enable' : 'disable');
+            $('#btblitz').flipswitch(enabled ? 'enable' : 'disable');
+        });
+        $(document).on('pagebeforeshow', '#btpage2', () => {
+            $('#btdefensepoints').flipswitch(BtMain.BTCOINCHE ? 'enable' : 'disable');
+            $('#btblitz').flipswitch(BtMain.BTCOINCHE ? 'enable' : 'disable');
         });
         document.getElementById('btretourjeu')   .addEventListener('click', () => this.retourjeu());
         document.getElementById('btquitterpartie').addEventListener('click', () => { this.m_findepartie = true; this.retourjeu(); });
@@ -404,7 +411,10 @@ class BtMain {
 
     betloopcoinche() {
         const enoughpasses = (this.m_pari.couleur >= 0) ? 3 : 4;
-        if (this.m_donne.betturn >= enoughpasses) {
+        const blitzForcedDealer = BtMain.BTBLITZ && this.m_pari.couleur < 0
+                                  && this.m_donne.betturn === 3
+                                  && this.m_donne.playerid === this.m_donneurid;
+        if (this.m_donne.betturn >= enoughpasses && !blitzForcedDealer) {
             this.clearlogenchere();
             if (this.m_pari.couleur < 0) {
                 this._scheduleEvent('btnouvelledonne');
@@ -437,7 +447,17 @@ class BtMain {
                     this.m_pari    = { ...pari, doubled: 0 };
                     this.m_preneurid = this.m_donne.playerid;
                     this.m_donne.betturn = 0;
-                    const label = `${SUIT_NAMES[pari.couleur]} ${pari.point}`;
+                    const label = `${SUIT_NAMES[pari.couleur]} ${pari.point === CAPOT_CONTRACT ? 'Capot' : pari.point}`;
+                    this.displaybulleinfo(label);
+                    this.displayencherecourante();
+                    this.addlogenchere(this.m_donne.playerid, label);
+                } else if (blitzForcedDealer) {
+                    // Blitz: donneur forcé — prend la meilleure couleur à 120 minimum
+                    const forcedPari = joueur.paricoinche(this, true);
+                    this.m_pari      = { ...forcedPari, doubled: 0 };
+                    this.m_preneurid = this.m_donne.playerid;
+                    this.m_donne.betturn = 0;
+                    const label = `${SUIT_NAMES[forcedPari.couleur]} ${forcedPari.point === CAPOT_CONTRACT ? 'Capot' : forcedPari.point}`;
                     this.displaybulleinfo(label);
                     this.displayencherecourante();
                     this.addlogenchere(this.m_donne.playerid, label);
@@ -467,8 +487,11 @@ class BtMain {
     }
 
     showbidpanelcoinche() {
-        const minbid = (this.m_pari.point > 0 ? this.m_pari.point + 10 : 80);
-        const bids   = [80, 90, 100, 110, 120, 130, 140, 150, 160];
+        const blitzMin   = BtMain.BTBLITZ ? 120 : 80;
+        const minbid     = (this.m_pari.point > 0 ? this.m_pari.point + 10 : blitzMin);
+        const forcedBid  = BtMain.BTBLITZ && this.m_pari.couleur < 0 && this.m_donne.betturn === 3
+                           && this.m_donne.playerid === this.m_donneurid;
+        const bids       = [80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180];
         const bidData = {};
 
         const panel = document.createElement('div');
@@ -516,6 +539,27 @@ class BtMain {
                 bidrow.appendChild(btn);
             });
             panel.appendChild(bidrow);
+
+            // Capot button
+            const capotrow = document.createElement('div');
+            capotrow.style.cssText = 'display:flex;justify-content:center;margin-bottom:6px';
+            const capotbtn = document.createElement('button');
+            const capotDisabled = CAPOT_CONTRACT < minbid;
+            capotbtn.style.cssText = `padding:4px 18px;border-radius:4px;border:none;cursor:pointer;${capotDisabled ? 'background:#444;color:#888;' : 'background:#336;color:white;font-weight:bold;'}`;
+            capotbtn.textContent = 'Capot';
+            if (!capotDisabled) {
+                capotbtn.className = 'btbid-btn btcapot-btn';
+                capotbtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    panel.querySelectorAll('.btbid-btn').forEach(b => { b.style.background = '#336'; b.style.fontWeight = ''; });
+                    capotbtn.style.background = '#c80';
+                    capotbtn.style.fontWeight = 'bold';
+                    bidData.selbid  = CAPOT_CONTRACT;
+                    bidData.selsuit = bidData.selsuit ?? 0;
+                });
+            }
+            capotrow.appendChild(capotbtn);
+            panel.appendChild(capotrow);
         }
 
         // Confirm + Passe + optional Coinche/Surcoinche
@@ -533,7 +577,7 @@ class BtMain {
             this.m_pari      = { couleur: bidData.selsuit, point: bidData.selbid, doubled: 0 };
             this.m_preneurid = this.m_donne.playerid;
             this.m_donne.betturn = 0;
-            const announced = `${SUIT_NAMES[bidData.selsuit]} ${bidData.selbid}`;
+            const announced = `${SUIT_NAMES[bidData.selsuit]} ${bidData.selbid === CAPOT_CONTRACT ? 'Capot' : bidData.selbid}`;
             this.addlogenchere(this.m_donne.playerid, announced);
             this.displaybulleinfo(announced);
             this.displayencherecourante();
@@ -546,7 +590,7 @@ class BtMain {
         passebtn.textContent = 'Passe';
         passebtn.addEventListener('click', e => { e.stopPropagation(); panel.remove(); this.parisudpassecoinche(); });
 
-        actrow.appendChild(passebtn);
+        if (!forcedBid) actrow.appendChild(passebtn);
 
         // Confirm button only when no coinche has been announced yet
         if (this.m_pari.doubled === 0) actrow.appendChild(confirmbtn);
@@ -606,7 +650,10 @@ class BtMain {
             } else if (this.m_pari.doubled === 0 && humanIsOpponent && humanJoueur.shouldcoinche(this)) {
                 hint = 'Coinche !';
             } else if (this.m_pari.doubled === 0) {
-                const pari = humanJoueur.paricoinche(this);
+                const isForced = BtMain.BTBLITZ && this.m_pari.couleur < 0
+                                 && this.m_donne.betturn === 3
+                                 && this.m_donne.playerid === this.m_donneurid;
+                const pari = humanJoueur.paricoinche(this, isForced);
                 hint = pari.couleur >= 0 ? `${SUIT_NAMES[pari.couleur]} ${pari.point}` : 'Passe';
             } else {
                 hint = 'Passe';
@@ -701,7 +748,9 @@ class BtMain {
         if (this.m_enchereicon) this.m_enchereicon.remove();
         if (this.m_pari.couleur < 0) return;
 
-        const label = `${SUIT_NAMES[this.m_pari.couleur]} ${this.m_pari.point}`;
+        const label = this.m_pari.point === CAPOT_CONTRACT
+            ? `${SUIT_NAMES[this.m_pari.couleur]} Capot`
+            : `${SUIT_NAMES[this.m_pari.couleur]} ${this.m_pari.point}`;
         const el = document.createElement('a');
         el.style.cssText = 'position:absolute;z-index:98;background-color:darkorange;font-size:12px';
         el.className = 'ui-btn ui-corner-all';
@@ -821,33 +870,35 @@ class BtMain {
 
         if      (this.m_donne.points[1] === 0) this.m_donne.points[0] += CAPOT_BONUS;
         else if (this.m_donne.points[0] === 0) this.m_donne.points[1] += CAPOT_BONUS;
-        else    this.m_donne.points[this.m_pliencours.m_winnerid % 2] += LAST_TRICK_BONUS;
+        else if (this.m_pari.point !== CAPOT_CONTRACT) this.m_donne.points[this.m_pliencours.m_winnerid % 2] += LAST_TRICK_BONUS;
 
         let eqpbelote = -1;
         this.m_joueurs.forEach(joueur => { if (joueur.m_belote >= 0) eqpbelote = joueur.m_id % 2; });
         if (eqpbelote >= 0) this.m_donne.points[eqpbelote] += BELOTE_BONUS;
 
-        const multiplier  = this.m_pari.doubled === 2 ? 4 : this.m_pari.doubled === 1 ? 2 : 1;
-        const eqppreneur  = this.m_preneurid % 2;
-        const contrat     = this.m_pari.point;
-        const ptpreneur   = this.m_donne.points[eqppreneur];
-        let btmessage     = PLAYER_NAMES[this.m_preneurid];
+        const multiplier   = this.m_pari.doubled === 2 ? 4 : this.m_pari.doubled === 1 ? 2 : 1;
+        const eqppreneur   = this.m_preneurid % 2;
+        const contrat      = this.m_pari.point;
+        const isCapot      = contrat === CAPOT_CONTRACT;
+        const ptpreneur    = this.m_donne.points[eqppreneur];
+        let btmessage      = PLAYER_NAMES[this.m_preneurid];
         const doubleSuffix = this.m_pari.doubled === 2 ? ' (surcoinché)' : this.m_pari.doubled === 1 ? ' (coinché)' : '';
 
-        if (ptpreneur >= contrat) {
-            this.m_totaux[eqppreneur]     += contrat * multiplier;
-            if (BtMain.BTDEFENSEPOINTS)
+        const contractMet = isCapot ? (this.m_donne.points[1 - eqppreneur] === 0) : (ptpreneur >= contrat);
+        if (contractMet) {
+            this.m_totaux[eqppreneur] += contrat * multiplier;
+            if (BtMain.BTDEFENSEPOINTS && !isCapot)
                 this.m_totaux[1 - eqppreneur] += this.m_donne.points[1 - eqppreneur] * multiplier;
-            btmessage += ` a réussi son contrat (${contrat})${doubleSuffix}`;
+            btmessage += isCapot ? ` a réussi son capot${doubleSuffix}` : ` a réussi son contrat (${contrat})${doubleSuffix}`;
         } else {
-            const penalty = (160 + contrat) * multiplier;
+            const penalty = isCapot ? CAPOT_CONTRACT * multiplier : (160 + contrat) * multiplier;
             if (eqppreneur === eqpbelote) {
                 this.m_totaux[1 - eqppreneur] += penalty;
                 this.m_totaux[eqppreneur]     += BELOTE_BONUS;
             } else {
                 this.m_totaux[1 - eqppreneur] += penalty;
             }
-            btmessage += ` a chuté son contrat de ${contrat}${doubleSuffix} !`;
+            btmessage += isCapot ? ` a chuté son capot${doubleSuffix} !` : ` a chuté son contrat de ${contrat}${doubleSuffix} !`;
         }
         this.m_donne.playerid = 2;
         this.updatescores();
@@ -945,76 +996,77 @@ class BtMain {
     // ── Options ────────────────────────────────────────────────────────────────
 
     applyoptions() {
-        const oldcardwidth  = BtCarte.CARTEWIDTH;
-        const olddirection  = BtMain.BTSENSINVERSE;
-        const jsdata        = JSON.parse(localStorage.getItem('mlrdev.belote.btoptions') || 'null');
+        const oldcardwidth = BtCarte.CARTEWIDTH;
+        const jsdata       = JSON.parse(localStorage.getItem('mlrdev.belote.btoptions') || 'null');
 
         if (jsdata) {
-            BtCarte.CARTEWIDTH      = parseInt(jsdata.btcardwidth) || 100;
-            BtMain.BTDELAY          = parseInt(jsdata.btdelay)     || 800;
-            BtMain.BTSCOREFINAL     = BtAIParams?.game?.scoreFinal ?? 1000;
-            BtMain.BTSENSINVERSE    = jsdata.btsenshoraire  || false;
-            BtMain.BTAUTOPLAYLAST   = jsdata.btautolast     || false;
-            BtMain.BTAUTOPLAYUNIQ   = jsdata.btautouniq     || false;
-            BtMain.BTCOINCHE        = jsdata.btcoinche        || false;
-            BtMain.BTDEFENSEPOINTS  = jsdata.btdefensepoints !== undefined ? jsdata.btdefensepoints : true;
-            BtMain.BTFULLAUTO       = jsdata.btjeuauto        || false;
+            BtCarte.CARTEWIDTH     = parseInt(jsdata.btcardwidth) || 100;
+            BtMain.BTDELAY         = parseInt(jsdata.btdelay)     || 800;
+            BtMain.BTSCOREFINAL    = BtAIParams?.game?.scoreFinal ?? 1000;
+            BtMain.BTSENSINVERSE   = jsdata.btsenshoraire  || false;
+            BtMain.BTAUTOPLAYLAST  = jsdata.btautolast     || false;
+            BtMain.BTAUTOPLAYUNIQ  = jsdata.btautouniq     || false;
+            BtMain.BTCOINCHE       = jsdata.btcoinche        || false;
+            BtMain.BTDEFENSEPOINTS = jsdata.btdefensepoints !== undefined ? jsdata.btdefensepoints : true;
+            BtMain.BTBLITZ         = jsdata.btblitz          || false;
+            BtMain.BTFULLAUTO      = jsdata.btjeuauto        || false;
         } else {
-            BtCarte.CARTEWIDTH      = 100;
-            BtMain.BTDELAY          = 800;
-            BtMain.BTSCOREFINAL     = BtAIParams?.game?.scoreFinal ?? 1000;
-            BtMain.BTSENSINVERSE    = false;
-            BtMain.BTAUTOPLAYLAST   = false;
-            BtMain.BTAUTOPLAYUNIQ   = false;
-            BtMain.BTCOINCHE        = false;
-            BtMain.BTDEFENSEPOINTS  = true;
-            BtMain.BTFULLAUTO       = false;
+            BtCarte.CARTEWIDTH     = 100;
+            BtMain.BTDELAY         = 800;
+            BtMain.BTSCOREFINAL    = BtAIParams?.game?.scoreFinal ?? 1000;
+            BtMain.BTSENSINVERSE   = false;
+            BtMain.BTAUTOPLAYLAST  = false;
+            BtMain.BTAUTOPLAYUNIQ  = false;
+            BtMain.BTCOINCHE       = false;
+            BtMain.BTDEFENSEPOINTS = true;
+            BtMain.BTBLITZ         = false;
+            BtMain.BTFULLAUTO      = false;
         }
 
         const g = id => document.getElementById(id);
-        if (g('btdelay'))      g('btdelay').value      = BtMain.BTDELAY;
-        if (g('btcardwidth'))  g('btcardwidth').value  = BtCarte.CARTEWIDTH;
-        if (g('btsenshoraire')) g('btsenshoraire').checked = BtMain.BTSENSINVERSE;
-        if (g('btautolast'))   g('btautolast').checked   = BtMain.BTAUTOPLAYLAST;
-        if (g('btautouniq'))   g('btautouniq').checked   = BtMain.BTAUTOPLAYUNIQ;
-        if (g('btjeuauto'))    g('btjeuauto').checked    = BtMain.BTFULLAUTO;
-        if (g('btcoinche'))    g('btcoinche').checked    = BtMain.BTCOINCHE;
-        if (g('btdefensepoints')) g('btdefensepoints').checked = BtMain.BTDEFENSEPOINTS;
-        if (g('btdefensepointsrow')) g('btdefensepointsrow').style.display = BtMain.BTCOINCHE ? '' : 'none';
+        if (g('btdelay'))      g('btdelay').value                 = BtMain.BTDELAY;
+        if (g('btcardwidth'))  g('btcardwidth').value             = BtCarte.CARTEWIDTH;
+        if (g('btsenshoraire')) g('btsenshoraire').checked        = BtMain.BTSENSINVERSE;
+        if (g('btautolast'))   g('btautolast').checked            = BtMain.BTAUTOPLAYLAST;
+        if (g('btautouniq'))   g('btautouniq').checked            = BtMain.BTAUTOPLAYUNIQ;
+        if (g('btjeuauto'))    g('btjeuauto').checked             = BtMain.BTFULLAUTO;
+        if (g('btcoinche'))    g('btcoinche').checked             = BtMain.BTCOINCHE;
+        if (g('btdefensepoints')) g('btdefensepoints').checked    = BtMain.BTDEFENSEPOINTS;
+        if (g('btblitz'))         g('btblitz').checked            = BtMain.BTBLITZ;
 
-        if (olddirection !== undefined && BtMain.BTSENSINVERSE !== olddirection) {
-            document.getElementById('btactionbutton')?.remove();
-            this.m_donne.betturn = 8;
-            this.m_findepartie   = true;
-        }
         if (BtCarte.CARTEWIDTH !== oldcardwidth) this.setsize();
 
         if (BtMain.c_humanplayer < 0 || BtMain.c_humanplayer > 3) BtMain.BTDELAY = 100;
     }
 
-    validateoptions() {
+    _saveoptionstolocal() {
         const g = id => document.getElementById(id);
-        const coincheBefore = BtMain.BTCOINCHE;
         const jsdata = {
-            btdelay:      g('btdelay').value,
-            btcardwidth:  g('btcardwidth').value,
-            btsenshoraire: g('btsenshoraire').checked,
-            btautolast:   g('btautolast').checked,
-            btautouniq:   g('btautouniq').checked,
-            btjeuauto:    g('btjeuauto').checked,
-            btcoinche:    g('btcoinche').checked,
-            btdefensepoints: g('btdefensepoints') ? g('btdefensepoints').checked : true
+            btdelay:         g('btdelay').value,
+            btcardwidth:     g('btcardwidth').value,
+            btsenshoraire:   g('btsenshoraire').checked,
+            btautolast:      g('btautolast').checked,
+            btautouniq:      g('btautouniq').checked,
+            btjeuauto:       g('btjeuauto').checked,
+            btcoinche:       g('btcoinche').checked,
+            btdefensepoints: g('btdefensepoints') ? g('btdefensepoints').checked : true,
+            btblitz:         g('btblitz') ? g('btblitz').checked : false
         };
         localStorage.setItem('mlrdev.belote.btoptions', JSON.stringify(jsdata));
+    }
+
+    applyliveoptions() {
+        this._saveoptionstolocal();
         this.applyoptions();
-        if (jsdata.btcoinche !== coincheBefore || !this.m_plis || !this.m_plis.length) {
-            // Game type changed or no deal in progress yet: start fresh
-            this.clearboard();
-            $(':mobile-pagecontainer').pagecontainer('change', '#btpage0', { transition: "fade" });
-            document.dispatchEvent(new Event('btnouvellepartie'));
-        } else {
-            this.retourjeu();
-        }
+        this.retourjeu();
+    }
+
+    newgameoptions() {
+        this._saveoptionstolocal();
+        this.applyoptions();
+        this.clearboard();
+        $(':mobile-pagecontainer').pagecontainer('change', '#btpage0', { transition: "fade" });
+        document.dispatchEvent(new Event('btnouvellepartie'));
     }
 
     // ── Sizing ─────────────────────────────────────────────────────────────────

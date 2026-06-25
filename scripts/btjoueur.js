@@ -125,28 +125,39 @@ class BtJoueur {
         return score;
     }
 
-    paricoinche(game) {
+    paricoinche(game, forced = false) {
         const p  = BtAIParams?.coinche?.bid        ?? {};
         const pc = BtAIParams?.coinche?.complement ?? {};
-        const minBidValue    = p.minBidValue     ?? 80;
-        const bidStep        = p.bidStep         ?? 10;
-        const minScoreToOpen = p.minScoreToOpen  ?? 55;
-        const scorePerStep   = p.scorePerStep    ?? 12;
-        const maxOpeningBid  = p.maxOpeningBid   ?? 160;
-        const raiseDivisor   = pc.raiseDivisor   ?? 20;
-        const maxRaiseSteps  = pc.maxRaiseSteps  ?? 3;
-        const raiseCap       = pc.raiseCap       ?? 150;
-        const switchThreshold = pc.suitSwitchThreshold ?? 60;
-        const switchMargin   = pc.suitSwitchMargin     ?? 15;
+        const blitzMin              = BtMain.BTBLITZ ? 120 : 80;
+        const minBidValue           = p.minBidValue           ?? blitzMin;
+        const effectiveMin          = Math.max(minBidValue, blitzMin);
+        const bidStep               = p.bidStep               ?? 10;
+        const minScoreToOpen        = p.minScoreToOpen        ?? 55;
+        const scorePerStep          = p.scorePerStep          ?? 12;
+        const maxOpeningBid         = p.maxOpeningBid         ?? 180;
+        const capotThreshold        = p.capotThreshold        ?? 120;
+        const opponentPressureFactor = p.opponentPressureFactor ?? 1.5;
+        const partnerPassPenalty    = p.partnerPassPenalty    ?? 8;
+        const raiseDivisor          = pc.raiseDivisor         ?? 20;
+        const maxRaiseSteps         = pc.maxRaiseSteps        ?? 3;
+        const raiseCap              = pc.raiseCap             ?? 150;
+        const partnerBidBonus       = pc.partnerBidBonus      ?? 10;
+        const switchThreshold       = pc.suitSwitchThreshold  ?? 60;
+        const switchMargin          = pc.suitSwitchMargin     ?? 15;
 
         const partnerid    = (this.m_id + 2) % 4;
-        const partnerleads = (game.m_pari.couleur >= 0 && game.m_preneurid === partnerid);
-        const minbid       = (game.m_pari.point > 0 ? game.m_pari.point + bidStep : minBidValue);
+        const partnerleads = game.m_pari.couleur >= 0 && game.m_preneurid === partnerid;
+        const opponentleads = game.m_pari.couleur >= 0 && !partnerleads;
+        const minbid       = game.m_pari.point > 0 ? game.m_pari.point + bidStep : effectiveMin;
+
+        // Did our partner already pass (before any bid was made)?
+        const partnerPassed = !partnerleads && game.m_pari.couleur >= 0
+                              && game.m_preneurid !== partnerid;
 
         if (partnerleads) {
             const supportScore = this._scoremaincomplement(game.m_pari.couleur);
 
-            // Consider switching to own suit if it's significantly stronger
+            // Consider switching to own suit if significantly stronger
             let ownBestCol = -1, ownBestScore = -1;
             for (let col = 0; col < 4; col++) {
                 if (col === game.m_pari.couleur) continue;
@@ -154,18 +165,24 @@ class BtJoueur {
                 if (s > ownBestScore) { ownBestScore = s; ownBestCol = col; }
             }
             if (ownBestScore >= switchThreshold && ownBestScore > supportScore + switchMargin) {
-                const bid = Math.min(maxOpeningBid, minBidValue + Math.floor((ownBestScore - minScoreToOpen) / scorePerStep) * bidStep);
+                const bid = Math.min(maxOpeningBid, effectiveMin + Math.floor((ownBestScore - minScoreToOpen) / scorePerStep) * bidStep);
                 if (bid >= minbid) return { couleur: ownBestCol, point: bid };
             }
 
+            // Dynamic raise cap: higher partner bid → more room to raise
+            const partnerBidLevel = Math.max(0, game.m_pari.point - effectiveMin);
+            const dynamicRaiseCap = raiseCap + Math.floor(partnerBidLevel / bidStep) * partnerBidBonus;
             const steps = Math.min(maxRaiseSteps, Math.floor(supportScore / raiseDivisor));
             if (steps === 0) return { couleur: -1 };
-            const bid = Math.min(raiseCap, game.m_pari.point + steps * bidStep);
+            const bid = Math.min(dynamicRaiseCap, game.m_pari.point + steps * bidStep);
             if (bid < minbid) return { couleur: -1 };
+            // Capot support
+            if (supportScore >= capotThreshold && bid >= maxOpeningBid)
+                return { couleur: game.m_pari.couleur, point: CAPOT_CONTRACT };
             return { couleur: game.m_pari.couleur, point: bid };
         }
 
-        const opponentcouleur = (game.m_pari.couleur >= 0 && !partnerleads) ? game.m_pari.couleur : -1;
+        const opponentcouleur = opponentleads ? game.m_pari.couleur : -1;
         let bestcouleur = -1, bestscore = -1;
         for (let attcol = 0; attcol < 4; attcol++) {
             if (attcol === opponentcouleur) continue;
@@ -173,10 +190,23 @@ class BtJoueur {
             if (score > bestscore) { bestscore = score; bestcouleur = attcol; }
         }
 
-        if (minbid > maxOpeningBid || bestscore < minScoreToOpen) return { couleur: -1 };
-        const bid = Math.min(maxOpeningBid, minBidValue + Math.floor((bestscore - minScoreToOpen) / scorePerStep) * bidStep);
-        if (bid < minbid) return { couleur: -1 };
-        return { couleur: bestcouleur, point: bid };
+        // Extra score required to enter against opponent pressure
+        const pressureExtra = opponentleads
+            ? Math.round((game.m_pari.point - effectiveMin) * opponentPressureFactor)
+            : 0;
+        // Malus if partner already passed without bidding
+        const passeMalus = partnerPassed ? partnerPassPenalty : 0;
+        const effectiveMinScore = minScoreToOpen + pressureExtra + passeMalus;
+
+        if (!forced && (minbid > maxOpeningBid || bestscore < effectiveMinScore)) return { couleur: -1 };
+
+        // Capot on exceptional hand
+        if (bestscore >= capotThreshold && !opponentleads)
+            return { couleur: bestcouleur, point: CAPOT_CONTRACT };
+
+        const bid = Math.min(maxOpeningBid, effectiveMin + Math.floor((bestscore - minScoreToOpen) / scorePerStep) * bidStep);
+        if (!forced && bid < minbid) return { couleur: -1 };
+        return { couleur: bestcouleur, point: Math.max(minbid, bid) };
     }
 
     shouldcoinche(game) {
